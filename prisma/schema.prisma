@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  
+}
+
+/* =========================
+   ENUMS (STRICT STATES)
+========================= */
+
+enum Role {
+  USER        // Job seeker
+  EMPLOYER    // Can post jobs
+  ADMIN       // Platform admin
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERN
+  CONTRACT
+  REMOTE
+}
+
+enum JobStatus {
+  DRAFT       // Created but not visible
+  OPEN        // Accepting applications
+  PAUSED      // Temporarily hidden
+  CLOSED      // No longer accepting
+}
+
+enum ApplicationStatus {
+  APPLIED
+  REVIEWING
+  SHORTLISTED
+  REJECTED
+  HIRED
+}
+
+/* =========================
+   USER (AUTH CORE)
+========================= */
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  emailVerified Boolean  @default(false)
+  
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  profile       Profile?
+
+  company       Company?
+  applications  Application[]
+  sessions      Session[]
+
+  @@index([role])
+}
+
+/* =========================
+   AUTH SESSIONS
+========================= */
+
+model Session {
+  id        String   @id @default(uuid())
+  sessionToken String   @unique
+  userId    String
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/* =========================
+   JOB SEEKER PROFILE
+========================= */
+
+model Profile {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  fullName    String
+  headline    String?
+  bio         String?
+  skills      String[]
+  experience  Int      // years
+  resumeUrl   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/* =========================
+   COMPANY (EMPLOYER)
+========================= */
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  website     String?
+  location    String?
+  isVerified  Boolean  @default(false)
+
+  ownerId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  jobs  Job[]
+
+  @@index([name])
+}
+
+/* =========================
+   JOB POSTING
+========================= */
+
+model Job {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  location    String
+  jobType     JobType
+  status      JobStatus @default(DRAFT)
+
+  salaryMin   Int?
+  salaryMax   Int?
+
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  applications Application[]
+
+  @@index([status])
+  @@index([jobType])
+  @@index([location])
+  @@index([salaryMin, salaryMax])
+}
+
+/* =========================
+   JOB APPLICATION
+========================= */
+
+model Application {
+  id        String             @id @default(uuid())
+  jobId     String
+  userId    String
+  status    ApplicationStatus  @default(APPLIED)
+  coverNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, userId])
+}
