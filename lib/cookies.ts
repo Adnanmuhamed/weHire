@@ -42,10 +42,20 @@ export async function setSessionCookie(sessionToken: string): Promise<void> {
 
 /**
  * Clear the session cookie
+ * Sets the cookie with an expired date to ensure it's removed from the browser
  */
 export async function clearSessionCookie(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  
+  // Delete the cookie by setting it with an expired date
+  // This ensures it's properly removed from the browser
+  cookieStore.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    expires: new Date(0), // Set to epoch time (Jan 1, 1970) to expire immediately
+    path: '/',
+  });
 }
 
 

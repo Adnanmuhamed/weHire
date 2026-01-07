@@ -1,48 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * Next.js Middleware - Authentication Guard
+ * Next.js Middleware - Path-Based Authentication Guard
  * 
- * This middleware runs on protected routes and enforces authentication.
- * It does NOT perform role checks - that's handled by RBAC guards in route handlers.
+ * Simple path-based middleware that only checks cookie existence and format.
  * 
- * IMPORTANT: Middleware runs on Edge runtime, which doesn't support Prisma.
- * This middleware performs a lightweight check (cookie existence and format).
- * Full session validation happens in route handlers via getCurrentUser().
+ * Behavior:
+ * - API routes (/api/*): Return 401 JSON when unauthenticated
+ * - Page routes: Redirect to /login?redirect=<pathname> when unauthenticated
  * 
- * Configuration:
- * - Excludes public routes (auth endpoints, static assets)
- * - Redirects unauthenticated users to /login (pages) or returns 401 (API routes)
+ * Rules:
+ * - Do NOT check /login or /signup inside logic (matcher excludes them)
+ * - Do NOT validate session in middleware
+ * - Only check cookie existence + format
+ * - NEVER redirect API routes to pages
  */
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - /api/auth/* (authentication endpoints)
-     * - /login, /signup (public auth pages)
-     * - /_next/static (static files)
-     * - /_next/image (image optimization files)
-     * - /favicon.ico (favicon file)
-     * - /public (public assets)
-     */
-    '/((?!api/auth|login|signup|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|api/jobs|login|signup|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('session_token')?.value;
 
-  // Get session token from cookie
-  const sessionToken = request.cookies.get('session_token')?.value;
+  const isValid =
+    typeof token === 'string' &&
+    /^[a-f0-9]{64}$/i.test(token);
 
-  // Lightweight check: verify cookie exists and has valid format
-  // Session token should be a hex string (64 chars for 256-bit token)
-  const isValidFormat = sessionToken && /^[a-f0-9]{64}$/i.test(sessionToken);
-
-  // If no valid session cookie, handle based on route type
-  if (!isValidFormat) {
-    // API routes return 401 JSON response
+  if (!isValid) {
+    // API routes return 401 JSON
     if (pathname.startsWith('/api/')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -50,15 +39,12 @@ export async function middleware(request: NextRequest) {
       );
     }
 
-    // Page routes redirect to login
+    // Page routes redirect to login with redirect param
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Cookie exists and has valid format
-  // Full validation (DB check, expiration, user status) happens in route handlers
-  // Role checks are handled by RBAC guards in route handlers
   return NextResponse.next();
 }
 
