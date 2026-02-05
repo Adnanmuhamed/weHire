@@ -1,5 +1,10 @@
+'use client';
+
 import Link from 'next/link';
 import { JobType } from '@prisma/client';
+import { Bookmark } from 'lucide-react';
+import { toggleSavedJobAction } from '@/app/actions/saved-job';
+import { useState } from 'react';
 
 /**
  * Job Card Component
@@ -17,6 +22,7 @@ export interface JobCardProps {
   salaryMax: number | null;
   companyName: string;
   createdAt: Date;
+  isSaved?: boolean;
 }
 
 const jobTypeLabels: Record<JobType, string> = {
@@ -58,21 +64,58 @@ export default function JobCard({
   salaryMax,
   companyName,
   createdAt,
+  isSaved = false,
 }: JobCardProps) {
+  const [saved, setSaved] = useState(isSaved);
+  const [isToggling, setIsToggling] = useState(false);
+
+  const handleBookmarkClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isToggling) return;
+    
+    setIsToggling(true);
+    try {
+      const result = await toggleSavedJobAction(jobId);
+      if (result.success !== undefined) {
+        setSaved(result.isSaved || false);
+      }
+    } catch (error) {
+      console.error('Failed to toggle saved job:', error);
+    } finally {
+      setIsToggling(false);
+    }
+  };
+
   return (
-    <Link
-      href={`/jobs/${jobId}`}
-      className="block p-6 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-md transition-all"
-    >
-      <article>
-        <div className="flex flex-col space-y-4">
-          {/* Header */}
-          <div>
-            <h3 className="text-xl font-semibold text-foreground mb-1 hover:underline">
-              {title}
-            </h3>
-            <p className="text-foreground/70 font-medium">{companyName}</p>
-          </div>
+    <div className="relative p-6 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-md transition-all">
+      {/* Bookmark Button */}
+      <button
+        onClick={handleBookmarkClick}
+        disabled={isToggling}
+        className="absolute top-4 right-4 p-2 rounded-md hover:bg-foreground/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed z-10"
+        aria-label={saved ? 'Remove from saved jobs' : 'Save job'}
+      >
+        <Bookmark
+          className={`w-5 h-5 ${
+            saved
+              ? 'fill-foreground text-foreground'
+              : 'text-foreground/60'
+          }`}
+        />
+      </button>
+
+      <Link href={`/jobs/${jobId}`}>
+        <article>
+          <div className="flex flex-col space-y-4">
+            {/* Header */}
+            <div className="pr-10">
+              <h3 className="text-xl font-semibold text-foreground mb-1 hover:underline">
+                {title}
+              </h3>
+              <p className="text-foreground/70 font-medium">{companyName}</p>
+            </div>
 
         {/* Details */}
         <div className="flex flex-wrap gap-4 text-sm text-foreground/60">
@@ -143,7 +186,8 @@ export default function JobCard({
           </div>
         </div>
       </article>
-    </Link>
+      </Link>
+    </div>
   );
 }
 

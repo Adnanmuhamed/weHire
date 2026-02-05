@@ -36,20 +36,9 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
         // Use redirect param if provided
         destination = redirectParam;
       } else {
-        // Otherwise, redirect based on user role
-        switch (response.user.role) {
-          case 'USER':
-            destination = '/applications';
-            break;
-          case 'EMPLOYER':
-            destination = '/employer';
-            break;
-          case 'ADMIN':
-            destination = '/admin';
-            break;
-          default:
-            destination = '/';
-        }
+        // Otherwise, redirect to homepage (Job Seeker Dashboard)
+        // All users land on homepage which shows role-appropriate content
+        destination = '/';
       }
 
       // HARD redirect using window.location.href

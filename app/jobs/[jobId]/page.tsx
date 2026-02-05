@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { headers } from 'next/headers';
-import { apiGet } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
+import { getJobById } from '@/services/job.service';
+import { db } from '@/lib/db';
 import ApplyCTA from '@/components/apply-cta';
-import { JobType } from '@prisma/client';
+import { JobType, Role } from '@prisma/client';
+import { Briefcase, MapPin, Calendar, DollarSign, User, ExternalLink, Building2 } from 'lucide-react';
 
 /**
  * Job Details Page
@@ -13,24 +14,18 @@ import { JobType } from '@prisma/client';
  * Public page - no authentication required.
  */
 
-interface JobDetails {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  jobType: JobType;
-  status: string;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  companyId: string;
-  createdAt: string;
-  updatedAt: string;
-  company: {
-    id: string;
-    name: string;
-    location: string | null;
-    website: string | null;
-  };
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const jobDate = new Date(date);
+  const diffInMs = now.getTime() - jobDate.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  if (diffInDays === 0) return 'Today';
+  if (diffInDays === 1) return 'Yesterday';
+  if (diffInDays < 7) return `${diffInDays} days ago`;
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`;
+  if (diffInDays < 365) return `${Math.floor(diffInDays / 30)} months ago`;
+  return `${Math.floor(diffInDays / 365)} years ago`;
 }
 
 interface PageProps {
@@ -53,185 +48,154 @@ function formatSalary(min: number | null, max: number | null): string {
   return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
 }
 
-function formatDate(date: string): string {
-  const jobDate = new Date(date);
-  return jobDate.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
 
 export default async function JobDetailsPage({ params }: PageProps) {
   const { jobId } = await params;
+  const user = await getCurrentUser();
 
-  // Get base URL for API calls
-  const headersList = await headers();
-  const host = headersList.get('host') || 'localhost:3000';
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const baseUrl = `${protocol}://${host}`;
+  // Fetch job details using service directly
+  const job = await getJobById(jobId);
+  
+  if (!job) {
+    notFound();
+  }
 
-  // Fetch job details
-  let job: JobDetails;
-  try {
-    const response = await apiGet<{ job: JobDetails }>(`${baseUrl}/api/jobs/${jobId}`);
-    job = response.job;
-  } catch (error) {
-    // Handle 404 or other errors
-    const apiError = error as Error & { status?: number };
-    if (apiError.status === 404) {
-      notFound();
-    }
-    throw error;
+  // Check if user has already applied (only for seekers)
+  let hasApplied = false;
+  if (user?.role === Role.USER) {
+    const existingApplication = await db.application.findUnique({
+      where: {
+        jobId_userId: {
+          jobId,
+          userId: user.id,
+        },
+      },
+    });
+    hasApplied = !!existingApplication;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-4xl">
-        {/* Back Link */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground mb-6 transition-colors"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-7xl mx-auto">
+          {/* Back Link */}
+          <Link
+            href="/jobs"
+            className="inline-flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground mb-6 transition-colors"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Back to Job Listings
-        </Link>
-
-        {/* Header */}
-        <div className="mb-8">
-          <div className="mb-4">
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              {job.title}
-            </h1>
-            <p className="text-xl text-foreground/70 font-medium">{job.company.name}</p>
-          </div>
-
-          {/* Job Meta */}
-          <div className="flex flex-wrap gap-4 text-sm text-foreground/60 mb-6">
-            <div className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-              <span>{job.location}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-              <span>{jobTypeLabels[job.jobType]}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <span>Posted {formatDate(job.createdAt)}</span>
-            </div>
-          </div>
-
-          {/* Apply CTA */}
-          <div className="mt-6">
-            <ApplyCTA jobId={jobId} isAuthenticated={!!(await getCurrentUser())} />
-          </div>
-        </div>
-
-        {/* Company Info */}
-        <div className="mb-8 p-6 border border-foreground/10 rounded-lg bg-foreground/5">
-          <h2 className="text-lg font-semibold text-foreground mb-2">About the Company</h2>
-          <p className="text-foreground/70">{job.company.name}</p>
-          {job.company.location && (
-            <p className="text-sm text-foreground/60 mt-1">{job.company.location}</p>
-          )}
-          {job.company.website && (
-            <a
-              href={job.company.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-foreground/70 hover:text-foreground mt-2 inline-block"
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
             >
-              Visit website →
-            </a>
-          )}
-        </div>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            Back to Job Listings
+          </Link>
 
-        {/* Job Description */}
-        <div className="prose prose-sm max-w-none">
-          <h2 className="text-2xl font-semibold text-foreground mb-4">Job Description</h2>
-          <div
-            className="text-foreground/80 whitespace-pre-wrap"
-            dangerouslySetInnerHTML={{ __html: job.description.replace(/\n/g, '<br />') }}
-          />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Main Content (Left 2/3) */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Header */}
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                  {job.title}
+                </h1>
+                <Link
+                  href={`/companies/${job.company.id}`}
+                  className="text-xl text-foreground/70 font-medium hover:text-foreground transition-colors inline-flex items-center gap-1"
+                >
+                  {job.company.name}
+                  <ExternalLink className="w-4 h-4" />
+                </Link>
+              </div>
+
+              {/* Job Meta */}
+              <div className="flex flex-wrap gap-4 text-sm text-foreground/70">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-foreground/60" />
+                  <span>{job.location}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-foreground/60" />
+                  <span>{jobTypeLabels[job.jobType]}</span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <DollarSign className="w-4 h-4 text-foreground/60" />
+                  <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
+                </div>
+
+                {job.experience !== null && (
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-foreground/60" />
+                    <span>{job.experience}+ years experience</span>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-foreground/60" />
+                  <span>Posted {formatRelativeTime(job.createdAt)}</span>
+                </div>
+              </div>
+
+              {/* Job Description */}
+              <div className="pt-6 border-t border-foreground/10">
+                <h2 className="text-2xl font-semibold text-foreground mb-4">Job Description</h2>
+                <div className="text-foreground/80 whitespace-pre-wrap leading-relaxed">
+                  {job.description}
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar (Right 1/3) */}
+            <aside className="lg:col-span-1 space-y-6">
+              {/* Company Card */}
+              <div className="rounded-lg border border-foreground/10 bg-background p-6 space-y-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 className="w-5 h-5 text-foreground/70" />
+                  <h3 className="text-lg font-semibold text-foreground">Company</h3>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">{job.company.name}</p>
+                  {job.company.location && (
+                    <p className="text-sm text-foreground/70 mt-1 flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {job.company.location}
+                    </p>
+                  )}
+                  {job.company.website && (
+                    <a
+                      href={job.company.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-foreground/70 hover:text-foreground mt-2 inline-flex items-center gap-1 transition-colors"
+                    >
+                      Visit website
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Apply CTA */}
+              <div className="sticky top-24">
+                <ApplyCTA
+                  jobId={jobId}
+                  currentUser={user}
+                  hasApplied={hasApplied}
+                />
+              </div>
+            </aside>
+          </div>
         </div>
       </div>
     </div>

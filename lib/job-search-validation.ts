@@ -14,6 +14,7 @@ export interface ValidatedSearchParams {
   jobType?: JobType;
   minSalary?: number;
   maxSalary?: number;
+  experience?: number;
   sort?: JobSortOption;
   page: number;
   limit: number;
@@ -121,6 +122,25 @@ export function validateJobSearchParams(
         error: 'minSalary cannot be greater than maxSalary',
       };
     }
+  }
+
+  // Validate experience
+  const experienceParam = searchParams.get('experience');
+  if (experienceParam !== null) {
+    const experience = parseInt(experienceParam, 10);
+    if (isNaN(experience) || experience < 0) {
+      return {
+        valid: false,
+        error: 'experience must be a non-negative integer',
+      };
+    }
+    if (experience > 50) {
+      return {
+        valid: false,
+        error: 'experience exceeds maximum allowed value (50 years)',
+      };
+    }
+    params.experience = experience;
   }
 
   // Validate sort option

@@ -40,6 +40,11 @@ enum ApplicationStatus {
   HIRED
 }
 
+enum WorkStatus {
+  EXPERIENCED
+  FRESHER
+}
+
 /* =========================
    USER (AUTH CORE)
 ========================= */
@@ -49,6 +54,8 @@ model User {
   email         String   @unique
   passwordHash  String
   role          Role     @default(USER)
+  mobileNumber  String?
+  workStatus    WorkStatus?
   isActive      Boolean  @default(true)
   emailVerified Boolean  @default(false)
   
@@ -63,6 +70,7 @@ model User {
   company       Company?
   applications  Application[]
   sessions      Session[]
+  savedJobs     SavedJob[]
 
   @@index([role])
 }
@@ -96,6 +104,12 @@ model Profile {
   skills      String[]
   experience  Int      // years
   resumeUrl   String?
+  avatarUrl   String?
+  college     String?
+  degree      String?
+  currentCompany String?
+  location    String?
+  mobile      String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -139,6 +153,7 @@ model Job {
 
   salaryMin   Int?
   salaryMax   Int?
+  experience  Int?
 
   companyId String
   createdAt DateTime @default(now())
@@ -146,6 +161,7 @@ model Job {
 
   company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   applications Application[]
+  savedJobs    SavedJob[]
 
   @@index([status])
   @@index([jobType])
@@ -171,4 +187,22 @@ model Application {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, userId])
+}
+
+/* =========================
+   SAVED JOBS
+========================= */
+
+model SavedJob {
+  id        String   @id @default(uuid())
+  userId    String
+  jobId     String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, jobId])
+  @@index([userId])
+  @@index([jobId])
 }

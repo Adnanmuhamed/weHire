@@ -15,6 +15,7 @@ export interface JobSearchFilters {
   jobType?: JobType;
   minSalary?: number;
   maxSalary?: number;
+  experience?: number; // Max experience filter (jobs where experience <= this value)
 }
 
 export type JobSortOption = 'newest' | 'salary_high' | 'salary_low';
@@ -24,6 +25,8 @@ export interface JobSearchParams {
   sort?: JobSortOption;
   page?: number;
   limit?: number;
+  userId?: string; // For checking saved status and filtering saved jobs
+  savedOnly?: boolean; // Filter to only show saved jobs
 }
 
 export interface JobSearchResult {
@@ -35,6 +38,7 @@ export interface JobSearchResult {
   salaryMax: number | null;
   companyName: string;
   createdAt: Date;
+  isSaved?: boolean; // Whether the job is saved by the current user
 }
 
 export interface JobSearchResponse {
@@ -52,11 +56,24 @@ export interface JobSearchResponse {
 /**
  * Build Prisma where clause for job search
  */
-function buildWhereClause(filters?: JobSearchFilters): Prisma.JobWhereInput {
+function buildWhereClause(
+  filters?: JobSearchFilters,
+  userId?: string,
+  savedOnly?: boolean
+): Prisma.JobWhereInput {
   const where: Prisma.JobWhereInput = {
     // Only return OPEN jobs for public search
     status: JobStatus.OPEN,
   };
+
+  // Filter by saved jobs if requested
+  if (savedOnly && userId) {
+    where.savedJobs = {
+      some: {
+        userId,
+      },
+    };
+  }
 
   // Text search on title and description (case-insensitive)
   if (filters?.query && filters.query.trim().length > 0) {
@@ -126,6 +143,25 @@ function buildWhereClause(filters?: JobSearchFilters): Prisma.JobWhereInput {
     }
   }
 
+  // Experience filtering
+  // Jobs where experience <= maxExperience (or null, meaning no requirement)
+  if (filters?.experience !== undefined) {
+    const existingAnd = where.AND
+      ? Array.isArray(where.AND)
+        ? where.AND
+        : [where.AND]
+      : [];
+    where.AND = [
+      ...existingAnd,
+      {
+        OR: [
+          { experience: { lte: filters.experience } },
+          { experience: null },
+        ],
+      },
+    ];
+  }
+
   return where;
 }
 
@@ -171,10 +207,20 @@ export async function searchJobs(
   const skip = (page - 1) * limit;
 
   // Build where clause
-  const where = buildWhereClause(params?.filters);
+  const where = buildWhereClause(params?.filters, params?.userId, params?.savedOnly);
 
   // Build orderBy clause
   const orderBy = buildOrderBy(params?.sort);
+
+  // Get saved job IDs if user is logged in
+  let savedJobIds: string[] = [];
+  if (params?.userId) {
+    const savedJobs = await db.savedJob.findMany({
+      where: { userId: params.userId },
+      select: { jobId: true },
+    });
+    savedJobIds = savedJobs.map((sj) => sj.jobId);
+  }
 
   // Execute queries in parallel for efficiency
   const [jobs, totalCount] = await Promise.all([
@@ -213,6 +259,7 @@ export async function searchJobs(
     salaryMax: job.salaryMax,
     companyName: job.company.name,
     createdAt: job.createdAt,
+    isSaved: params?.userId ? savedJobIds.includes(job.id) : undefined,
   }));
 
   // Calculate pagination metadata

@@ -30,6 +30,11 @@ export function middleware(request: NextRequest) {
     typeof token === 'string' &&
     /^[a-f0-9]{64}$/i.test(token);
 
+  // Allow root path (/) for unauthenticated users (public homepage)
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
   if (!isValid) {
     // API routes return 401 JSON
     if (pathname.startsWith('/api/')) {

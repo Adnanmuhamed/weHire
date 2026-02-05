@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { requireUser } from '@/lib/rbac';
 import { getUserApplications } from '@/services/application.service';
 import ApplicationCard from '@/components/application-card';
+import ApplicationsList from '@/components/applications-list';
 import { ApplicationStatus } from '@prisma/client';
 
 /**
@@ -126,7 +127,7 @@ export default async function ApplicationsPage() {
               </p>
               <div className="mt-6">
                 <Link
-                  href="/"
+                  href="/jobs"
                   className="inline-flex items-center px-6 py-3 bg-foreground text-background rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-opacity"
                 >
                   Browse Jobs
@@ -135,19 +136,7 @@ export default async function ApplicationsPage() {
             </div>
           </div>
         ) : (
-          <div className="space-y-4">
-            {data.applications.map((application) => (
-              <ApplicationCard
-                key={application.id}
-                applicationId={application.id}
-                jobId={application.job.id}
-                jobTitle={application.job.title}
-                companyName={application.job.company.name}
-                status={application.status}
-                appliedDate={new Date(application.createdAt)}
-              />
-            ))}
-          </div>
+          <ApplicationsList applications={data.applications} />
         )}
       </div>
     </div>

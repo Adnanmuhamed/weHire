@@ -59,6 +59,7 @@ async function postHandler(request: NextRequest) {
     status: body.status,
     salaryMin: body.salaryMin,
     salaryMax: body.salaryMax,
+    experience: body.experience,
   });
 
   return NextResponse.json(
@@ -110,6 +111,7 @@ export const POST = routeWrappers.jobCreation(async (request: NextRequest) => {
  * - jobType?: JobType - Filter by job type (exact match)
  * - minSalary?: number - Minimum salary filter (non-negative integer)
  * - maxSalary?: number - Maximum salary filter (non-negative integer)
+ * - experience?: number - Maximum experience filter (jobs where experience <= this value)
  * - sort?: 'newest' | 'salary_high' | 'salary_low' - Sort option (default: newest)
  * - page?: number - Page number (default: 1, min: 1)
  * - limit?: number - Results per page (default: 20, max: 50)
@@ -121,6 +123,9 @@ export const POST = routeWrappers.jobCreation(async (request: NextRequest) => {
 async function getHandler(request: NextRequest) {
   const { searchParams } = new URL(request.url);
 
+  // Get current user (optional - for saved jobs feature)
+  const user = await getCurrentUser();
+
   // Validate all search parameters
   const validation = validateJobSearchParams(searchParams);
   if (!validation.valid) {
@@ -128,6 +133,9 @@ async function getHandler(request: NextRequest) {
   }
 
   const params = validation.params!;
+
+  // Check for saved filter
+  const savedOnly = searchParams.get('saved') === 'true';
 
   // Build search parameters
   const searchParams_obj = {
@@ -137,10 +145,13 @@ async function getHandler(request: NextRequest) {
       ...(params.jobType && { jobType: params.jobType }),
       ...(params.minSalary !== undefined && { minSalary: params.minSalary }),
       ...(params.maxSalary !== undefined && { maxSalary: params.maxSalary }),
+      ...(params.experience !== undefined && { experience: params.experience }),
     },
     ...(params.sort && { sort: params.sort }),
     page: params.page,
     limit: params.limit,
+    ...(user?.id && { userId: user.id }),
+    ...(savedOnly && { savedOnly: true }),
   };
 
   // Call search service

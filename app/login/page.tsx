@@ -25,28 +25,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const redirectParam = resolvedParams.redirect;
   const hasRedirectParam = redirectParam !== undefined && redirectParam !== null;
 
-  // If user is authenticated AND no redirect param exists, redirect by role
+  // If user is authenticated AND no redirect param exists, redirect to homepage
   // This prevents infinite loops when middleware sends user to /login?redirect=...
+  // All users land on homepage which shows role-appropriate content
   if (user && !hasRedirectParam) {
-    let destination = '/';
-
-    // Redirect based on user role
-    switch (user.role) {
-      case Role.USER:
-        destination = '/applications';
-        break;
-      case Role.EMPLOYER:
-        destination = '/employer';
-        break;
-      case Role.ADMIN:
-        destination = '/admin';
-        break;
-      default:
-        destination = '/';
-    }
-
     // Server-side redirect - user never sees login page
-    redirect(destination);
+    redirect('/');
   }
 
   // Render login form if:

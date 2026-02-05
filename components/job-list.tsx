@@ -21,6 +21,7 @@ interface JobSearchResponse {
     salaryMax: number | null;
     companyName: string;
     createdAt: string;
+    isSaved?: boolean;
   }>;
   pagination: {
     totalCount: number;
@@ -129,6 +130,7 @@ async function JobListInner({ searchParams }: { searchParams: URLSearchParams })
             salaryMax={job.salaryMax}
             companyName={job.companyName}
             createdAt={new Date(job.createdAt)}
+            isSaved={job.isSaved}
           />
         ))}
       </div>

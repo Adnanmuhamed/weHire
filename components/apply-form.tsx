@@ -4,22 +4,47 @@
  * Apply Form Component
  * 
  * Client Component for submitting job applications.
- * Handles form submission, validation, and success states.
+ * Shows resume URL from profile and uses server action.
  */
 
-import { useState, FormEvent } from 'react';
-import { apiPost } from '@/lib/api';
+import { useState, FormEvent, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { submitApplication } from '@/app/actions/application';
+import { FileText, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 interface ApplyFormProps {
   jobId: string;
   onCancel: () => void;
+  userId: string;
 }
 
-export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
+export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
+  const router = useRouter();
   const [coverNote, setCoverNote] = useState('');
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isLoadingResume, setIsLoadingResume] = useState(true);
+
+  // Fetch user's resume URL from profile
+  useEffect(() => {
+    async function fetchResumeUrl() {
+      try {
+        const response = await fetch('/api/profile/resume');
+        if (response.ok) {
+          const data = await response.json();
+          setResumeUrl(data.resumeUrl);
+        }
+      } catch (err) {
+        // Ignore errors - resume is optional
+      } finally {
+        setIsLoadingResume(false);
+      }
+    }
+    fetchResumeUrl();
+  }, []);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -27,24 +52,22 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
     setIsLoading(true);
 
     try {
-      await apiPost(`/api/jobs/${jobId}/applications`, {
-        coverNote: coverNote.trim() || undefined,
+      const result = await submitApplication({
+        jobId,
+        coverNote: coverNote.trim() || null,
       });
 
-      setIsSuccess(true);
-    } catch (err) {
-      const apiError = err as Error & { status?: number; code?: string };
-      
-      // Handle duplicate application error
-      if (apiError.status === 409 || apiError.code === 'DUPLICATE_APPLICATION') {
-        setError('You have already applied to this job.');
-      } else if (apiError.status === 403) {
-        setError('You cannot apply to your own job posting.');
-      } else if (apiError.status === 404) {
-        setError('Job not found or no longer accepting applications.');
+      if (result.error) {
+        setError(result.error);
       } else {
-        setError(apiError.message || 'Failed to submit application. Please try again.');
+        setIsSuccess(true);
+        // Refresh the page after a short delay
+        setTimeout(() => {
+          router.refresh();
+        }, 2000);
       }
+    } catch (err) {
+      setError('Failed to submit application. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -54,25 +77,26 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
     return (
       <div className="p-6 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg">
         <div className="flex items-start gap-3">
-          <svg
-            className="w-6 h-6 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+          <div className="w-6 h-6 rounded-full bg-green-600 dark:bg-green-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <svg
+              className="w-4 h-4 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
           <div className="flex-1">
             <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-1">
               Application Submitted!
             </h3>
-            <p className="text-green-700 dark:text-green-300">
+            <p className="text-green-700 dark:text-green-300 text-sm">
               Your application has been successfully submitted. The employer will review it and get back to you.
             </p>
           </div>
@@ -82,25 +106,67 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
   }
 
   return (
-    <div className="p-6 border border-foreground/10 rounded-lg bg-foreground/5">
-      <h3 className="text-lg font-semibold text-foreground mb-4">Apply for this Job</h3>
+    <div className="rounded-lg border border-foreground/10 bg-background p-6 space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-foreground mb-1">Apply for this Job</h3>
+        <p className="text-sm text-foreground/70">
+          Complete your application below
+        </p>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-md"
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-md text-sm"
             role="alert"
           >
             {error}
           </div>
         )}
 
+        {/* Resume Display */}
+        <div className="p-4 border border-foreground/10 rounded-md bg-foreground/5">
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Resume
+          </label>
+          {isLoadingResume ? (
+            <p className="text-sm text-foreground/60">Loading...</p>
+          ) : resumeUrl ? (
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-foreground/60" />
+              <a
+                href={resumeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-foreground/80 hover:text-foreground transition-colors inline-flex items-center gap-1"
+              >
+                View Resume
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-foreground/60">
+                No resume uploaded yet
+              </p>
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-1 text-sm text-foreground/70 hover:text-foreground transition-colors"
+              >
+                <LinkIcon className="w-3 h-3" />
+                Update Profile to add resume
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Cover Note */}
         <div>
           <label
             htmlFor="coverNote"
-            className="block text-sm font-medium mb-2"
+            className="block text-sm font-medium mb-2 text-foreground"
           >
-            Cover Note <span className="text-foreground/50">(optional)</span>
+            Cover Note <span className="text-foreground/50 font-normal">(optional)</span>
           </label>
           <textarea
             id="coverNote"
@@ -109,7 +175,7 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
             rows={6}
             maxLength={5000}
             placeholder="Tell the employer why you're a great fit for this position..."
-            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent resize-y"
+            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent resize-y"
             disabled={isLoading}
           />
           <p className="mt-1 text-xs text-foreground/60">
@@ -117,11 +183,12 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
           </p>
         </div>
 
-        <div className="flex gap-3">
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-2">
           <button
             type="submit"
             disabled={isLoading}
-            className="px-6 py-2 bg-foreground text-background rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+            className="flex-1 px-6 py-2 bg-foreground text-background rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
           >
             {isLoading ? 'Submitting...' : 'Submit Application'}
           </button>
@@ -129,7 +196,7 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="px-6 py-2 border border-foreground/20 rounded-md font-medium hover:bg-foreground/5 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="px-6 py-2 border border-foreground/20 rounded-md font-medium text-foreground hover:bg-foreground/5 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Cancel
           </button>
@@ -138,4 +205,3 @@ export default function ApplyForm({ jobId, onCancel }: ApplyFormProps) {
     </div>
   );
 }
-
