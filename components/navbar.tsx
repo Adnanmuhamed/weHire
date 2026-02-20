@@ -84,30 +84,50 @@ export default async function Navbar() {
           <div className="flex items-center gap-4">
             {user ? (
               <>
-                {/* Jobs link - visible only to authenticated users */}
-                <Link
-                  href="/jobs"
-                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                >
-                  Jobs
-                </Link>
-
                 {/* Role-based navigation links */}
                 {user.role === Role.USER && (
-                  <Link
-                    href="/applications"
-                    className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                  >
-                    My Applications
-                  </Link>
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/jobs"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Jobs
+                    </Link>
+                    <Link
+                      href="/companies"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Companies
+                    </Link>
+                  </>
                 )}
                 {user.role === Role.EMPLOYER && (
-                  <Link
-                    href="/employer"
-                    className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                  >
-                    Employer Dashboard
-                  </Link>
+                  <>
+                    <Link
+                      href="/employer"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/employer/jobs/new"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Post a Job
+                    </Link>
+                    <Link
+                      href="/employer/settings"
+                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Settings
+                    </Link>
+                  </>
                 )}
                 {user.role === Role.ADMIN && (
                   <Link
@@ -123,11 +143,30 @@ export default async function Navbar() {
                   userEmail={user.email}
                   userName={profile?.fullName || null}
                   avatarUrl={profile?.avatarUrl || null}
+                  userRole={user.role}
                   logoutAction={logoutAction}
                 />
               </>
             ) : (
               <>
+                <Link
+                  href="/jobs"
+                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                >
+                  Find Jobs
+                </Link>
+                <Link
+                  href="/companies"
+                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                >
+                  Companies
+                </Link>
+                <Link
+                  href="/employer/signup"
+                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                >
+                  For Employers
+                </Link>
                 <Link
                   href="/login"
                   className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"

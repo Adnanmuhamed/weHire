@@ -2,14 +2,13 @@
 
 /**
  * Login Form Component
- * 
- * Client-side login form with email and password.
- * Handles authentication and redirects on success.
+ *
+ * Client-side login form. Modern UI with large inputs and clear CTAs.
  */
 
 import { useState, FormEvent } from 'react';
-import { login, AuthError } from '@/lib/auth-client';
 import Link from 'next/link';
+import { loginUser } from '@/app/actions/auth';
 
 interface LoginFormProps {
   redirectParam: string | null;
@@ -27,45 +26,45 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const response = await login(email, password);
+      const result = await loginUser({ email, password });
 
-      // Determine redirect destination
-      let destination = '/';
-
-      if (redirectParam) {
-        // Use redirect param if provided
-        destination = redirectParam;
-      } else {
-        // Otherwise, redirect to homepage (Job Seeker Dashboard)
-        // All users land on homepage which shows role-appropriate content
-        destination = '/';
+      if (!result.success || result.error) {
+        setError(result.error || 'Login failed. Please try again.');
+        setIsLoading(false);
+        return;
       }
 
-      // HARD redirect using window.location.href
-      // This ensures:
-      // - Cookie persistence is guaranteed
-      // - Middleware sees the cookie on next request
-      // - All Server Components re-render with new auth state
-      // - No stale navigation state
+      let destination = '/';
+      if (redirectParam) {
+        destination = redirectParam;
+      } else if (result.role === 'RECRUITER') {
+        destination = '/employer';
+      } else if (result.role === 'ADMIN') {
+        destination = '/admin';
+      }
       window.location.href = destination;
     } catch (err) {
-      const authError = err as AuthError;
-      setError(authError.message || 'Login failed. Please try again.');
+      console.error(err);
+      setError('Login failed. Please try again.');
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold mb-2">Sign In</h1>
-        <p className="text-foreground/70">Enter your credentials to continue</p>
+    <div className="w-full max-w-md mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+          Login to JobPortal
+        </h1>
+        <p className="text-foreground/70">
+          Welcome back. Enter your credentials to continue.
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
           <div
-            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-md"
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg text-sm"
             role="alert"
           >
             {error}
@@ -75,7 +74,7 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
         <div>
           <label
             htmlFor="email"
-            className="block text-sm font-medium mb-2"
+            className="block text-sm font-medium text-foreground mb-2"
           >
             Email
           </label>
@@ -86,7 +85,7 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
+            className="w-full px-4 py-3 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent transition-shadow disabled:opacity-50"
             placeholder="you@example.com"
             disabled={isLoading}
           />
@@ -95,7 +94,7 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
         <div>
           <label
             htmlFor="password"
-            className="block text-sm font-medium mb-2"
+            className="block text-sm font-medium text-foreground mb-2"
           >
             Password
           </label>
@@ -106,7 +105,7 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
+            className="w-full px-4 py-3 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent transition-shadow disabled:opacity-50"
             placeholder="••••••••"
             disabled={isLoading}
           />
@@ -115,24 +114,32 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-foreground text-background py-2 px-4 rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+          className="w-full bg-foreground text-background py-3 px-4 rounded-lg font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-opacity shadow-sm"
         >
           {isLoading ? 'Signing in...' : 'Sign In'}
         </button>
       </form>
 
-      <div className="mt-6 text-center text-sm">
-        <p className="text-foreground/70">
-          Don't have an account?{' '}
-          <Link
-            href="/signup"
-            className="text-foreground font-medium hover:underline"
-          >
-            Sign up
-          </Link>
-        </p>
+      <div className="relative my-8">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-foreground/10" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="px-4 bg-background text-foreground/60">
+            Or continue with
+          </span>
+        </div>
       </div>
+
+      <p className="text-center text-sm text-foreground/70">
+        Don&apos;t have an account?{' '}
+        <Link
+          href="/signup"
+          className="font-medium text-foreground hover:underline"
+        >
+          Sign up
+        </Link>
+      </p>
     </div>
   );
 }
-

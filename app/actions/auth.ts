@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { hashPassword } from '@/lib/password';
+import { hashPassword, comparePassword } from '@/lib/password';
 import { createSession } from '@/lib/session';
 import { setSessionCookie } from '@/lib/cookies';
 import {
@@ -51,6 +51,8 @@ export async function registerUser(
             fullName: data.fullName,
             experience: 0,
             skills: [],
+            mobile: data.mobileNumber ?? undefined,
+            email: data.email.toLowerCase(),
           },
         },
       },
@@ -73,4 +75,67 @@ export async function registerUser(
     };
   }
 }
+
+export interface LoginUserInput {
+  email: string;
+  password: string;
+}
+
+export interface LoginUserResult {
+  success?: boolean;
+  error?: string;
+  role?: 'CANDIDATE' | 'RECRUITER' | 'ADMIN';
+}
+
+export async function loginUser(
+  input: LoginUserInput
+): Promise<LoginUserResult> {
+  const email = input.email.trim().toLowerCase();
+  const password = input.password;
+
+  if (!email || !password) {
+    return { error: 'Email and password are required.' };
+  }
+
+  const user = await db.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      role: true,
+      isActive: true,
+    },
+  });
+
+  if (!user) {
+    return { error: 'Invalid email or password.' };
+  }
+
+  if (!user.isActive) {
+    return { error: 'Your account is deactivated.' };
+  }
+
+  const isValidPassword = await comparePassword(password, user.passwordHash);
+
+  if (!isValidPassword) {
+    return { error: 'Invalid email or password.' };
+  }
+
+  const sessionToken = await createSession(user.id);
+  await setSessionCookie(sessionToken);
+
+  let role: LoginUserResult['role'] = 'CANDIDATE';
+  if (user.role === Role.EMPLOYER) {
+    role = 'RECRUITER';
+  } else if (user.role === Role.ADMIN) {
+    role = 'ADMIN';
+  }
+
+  return {
+    success: true,
+    role,
+  };
+}
+
 

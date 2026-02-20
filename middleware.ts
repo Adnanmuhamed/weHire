@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
   matcher: [
-    '/((?!api/auth|api/jobs|login|signup|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|api/jobs|login|signup|employer/signup|jobs|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 
@@ -30,8 +30,8 @@ export function middleware(request: NextRequest) {
     typeof token === 'string' &&
     /^[a-f0-9]{64}$/i.test(token);
 
-  // Allow root path (/) for unauthenticated users (public homepage)
-  if (pathname === '/') {
+  // Allow root path (/), /jobs, and /companies for unauthenticated users (public pages)
+  if (pathname === '/' || pathname.startsWith('/jobs') || pathname.startsWith('/companies')) {
     return NextResponse.next();
   }
 

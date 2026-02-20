@@ -2,15 +2,16 @@
 
 /**
  * Profile Form Component
- * 
+ *
  * Client Component for editing user profile.
  * Handles all profile fields including skills tag input.
  */
 
-import { useState, FormEvent, KeyboardEvent } from 'react';
-import { updateProfile } from '@/app/actions/profile';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, X, Phone } from 'lucide-react';
+import { toast } from 'sonner';
+import { updateProfile } from '@/app/actions/profile';
+import { Save, Phone } from 'lucide-react';
 import FileUpload from './file-upload';
 
 interface ProfileFormProps {
@@ -29,10 +30,10 @@ interface ProfileFormProps {
     location: string | null;
     mobile: string | null;
   };
-  userId: string;
+  userId?: string;
 }
 
-export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
+export default function ProfileForm({ initialData }: ProfileFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,8 +43,9 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
   const [fullName, setFullName] = useState(initialData.fullName);
   const [headline, setHeadline] = useState(initialData.headline || '');
   const [bio, setBio] = useState(initialData.bio || '');
-  const [skills, setSkills] = useState<string[]>(initialData.skills || []);
-  const [skillInput, setSkillInput] = useState('');
+  const [skillsString, setSkillsString] = useState(
+    (initialData.skills || []).join(', ')
+  );
   const [experience, setExperience] = useState(initialData.experience || 0);
   const [resumeUrl, setResumeUrl] = useState(initialData.resumeUrl || '');
   const [avatarUrl, setAvatarUrl] = useState(initialData.avatarUrl || '');
@@ -53,21 +55,6 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
   const [location, setLocation] = useState(initialData.location || '');
   const [mobile, setMobile] = useState(initialData.mobile || '');
 
-  const handleAddSkill = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && skillInput.trim()) {
-      e.preventDefault();
-      const trimmed = skillInput.trim();
-      if (!skills.includes(trimmed)) {
-        setSkills([...skills, trimmed]);
-        setSkillInput('');
-      }
-    }
-  };
-
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(skills.filter((skill) => skill !== skillToRemove));
-  };
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
@@ -76,28 +63,22 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
 
     try {
       const result = await updateProfile({
-        userId,
         fullName: fullName.trim(),
-        headline: headline.trim() || null,
-        bio: bio.trim() || null,
-        skills,
+        headline: headline.trim() || undefined,
+        bio: bio.trim() || undefined,
+        skills: skillsString.trim() || '',
         experience,
-        resumeUrl: resumeUrl && resumeUrl.trim() ? resumeUrl.trim() : null,
-        avatarUrl: avatarUrl && avatarUrl.trim() ? avatarUrl.trim() : null,
-        college: college.trim() || null,
-        degree: degree.trim() || null,
-        currentCompany: currentCompany.trim() || null,
-        location: location.trim() || null,
-        mobile: mobile.trim(),
+        resumeUrl: resumeUrl?.trim() || undefined,
+        location: location.trim() || undefined,
+        mobile: mobile.trim() || undefined,
       });
 
       if (result.error) {
         setError(result.error);
       } else {
         setSuccess(true);
-        // Refresh the page to show updated data
+        toast.success('Profile updated successfully!');
         router.refresh();
-        // Clear success message after 3 seconds
         setTimeout(() => setSuccess(false), 3000);
       }
     } catch (err) {
@@ -188,31 +169,11 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
           <input
             id="skills"
             type="text"
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyDown={handleAddSkill}
-            placeholder="Type a skill and press Enter"
+            value={skillsString}
+            onChange={(e) => setSkillsString(e.target.value)}
+            placeholder="React, Node.js, TypeScript"
             className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
           />
-          {skills.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-2">
-              {skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="inline-flex items-center gap-1 px-3 py-1 bg-foreground/10 text-foreground rounded-full text-sm"
-                >
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSkill(skill)}
-                    className="hover:text-red-500 transition-colors"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Experience */}
@@ -313,14 +274,18 @@ export default function ProfileForm({ initialData, userId }: ProfileFormProps) {
           </p>
         </div>
 
-        {/* Resume Upload */}
+        {/* Resume Link */}
         <div>
-          <FileUpload
-            fileType="pdf"
-            label="Resume"
-            value={resumeUrl || null}
-            onChange={(url) => setResumeUrl(url || '')}
-            maxSizeMB={10}
+          <label htmlFor="resumeUrl" className="block text-sm font-medium mb-2 text-foreground">
+            Resume Link
+          </label>
+          <input
+            id="resumeUrl"
+            type="url"
+            value={resumeUrl}
+            onChange={(e) => setResumeUrl(e.target.value)}
+            placeholder="Link to Google Drive / LinkedIn"
+            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
           />
         </div>
       </div>

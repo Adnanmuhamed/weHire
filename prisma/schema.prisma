@@ -32,6 +32,12 @@ enum JobStatus {
   CLOSED      // No longer accepting
 }
 
+enum WorkMode {
+  REMOTE
+  HYBRID
+  ONSITE
+}
+
 enum ApplicationStatus {
   APPLIED
   REVIEWING
@@ -43,6 +49,15 @@ enum ApplicationStatus {
 enum WorkStatus {
   EXPERIENCED
   FRESHER
+}
+
+enum CompanyType {
+  CORPORATE
+  FOREIGN_MNC
+  STARTUP
+  INDIAN_MNC
+  GOVT
+  OTHERS
 }
 
 /* =========================
@@ -58,19 +73,17 @@ model User {
   workStatus    WorkStatus?
   isActive      Boolean  @default(true)
   emailVerified Boolean  @default(false)
-  
-
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   // Relations
-  profile       Profile?
-
-  company       Company?
-  applications  Application[]
-  sessions      Session[]
-  savedJobs     SavedJob[]
+  profile        Profile?
+  jobPreference  JobPreference?
+  company        Company?
+  applications   Application[]
+  sessions       Session[]
+  savedJobs      SavedJob[]
 
   @@index([role])
 }
@@ -96,23 +109,112 @@ model Session {
 ========================= */
 
 model Profile {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  fullName    String
-  headline    String?
-  bio         String?
-  skills      String[]
-  experience  Int      // years
-  resumeUrl   String?
-  avatarUrl   String?
-  college     String?
-  degree      String?
-  currentCompany String?
-  location    String?
-  mobile      String?
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  fullName        String
+  headline        String?
+  bio             String?
+  profileSummary  String?
+  resumeHeadline  String?
+  skills          String[]
+  experience      Int       // years
+  resumeUrl       String?
+  avatarUrl       String?
+  linkedinUrl     String?
+  githubUrl       String?
+  portfolioUrl    String?
+  college         String?
+  degree          String?
+  currentCompany  String?
+  location        String?
+  currentLocation String?
+  mobile          String?
+  email           String?
+  availability    String?
+  dob             DateTime?
+  gender          String?
+  maritalStatus   String?
+  languages       String[]
+  careerBreak     Boolean   @default(false)
+  differentlyAbled Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  education    Education[]
+  employment   Employment[]
+  projects     Project[]
+  certificates Certificate[]
+}
+
+model Education {
+  id        String   @id @default(uuid())
+  degree    String
+  college   String
+  stream    String?
+  startYear Int?
+  endYear   Int?
+  isFullTime Boolean @default(true)
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Employment {
+  id          String  @id @default(uuid())
+  designation String
+  company     String
+  location    String?
+  startYear   Int?
+  endYear     Int?
+  isCurrent   Boolean @default(false)
+  description String?
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Project {
+  id           String    @id @default(uuid())
+  title        String
+  description  String?
+  role         String?
+  projectLink  String?
+  startDate    DateTime?
+  endDate      DateTime?
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Certificate {
+  id        String    @id @default(uuid())
+  name      String
+  issuer    String?
+  issueDate DateTime?
+  url       String?
+
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model JobPreference {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  locations         String[]
+  titles            String[]
+  expectedSalaryMin Int?
+  expectedSalaryMax Int?
+  workModes         WorkMode[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -122,12 +224,15 @@ model Profile {
 ========================= */
 
 model Company {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   name        String
   description String
   website     String?
   location    String?
-  isVerified  Boolean  @default(false)
+  logoUrl     String?
+  isVerified  Boolean     @default(false)
+  type        CompanyType @default(STARTUP)
+  size        String?
 
   ownerId   String   @unique
   createdAt DateTime @default(now())
@@ -137,6 +242,7 @@ model Company {
   jobs  Job[]
 
   @@index([name])
+  @@index([type])
 }
 
 /* =========================
@@ -150,10 +256,12 @@ model Job {
   location    String
   jobType     JobType
   status      JobStatus @default(DRAFT)
+  workMode    WorkMode  @default(ONSITE)
+  degree      String?
 
   salaryMin   Int?
   salaryMax   Int?
-  experience  Int?
+  experience  Int?      // years
 
   companyId String
   createdAt DateTime @default(now())
@@ -165,6 +273,7 @@ model Job {
 
   @@index([status])
   @@index([jobType])
+  @@index([workMode])
   @@index([location])
   @@index([salaryMin, salaryMax])
 }

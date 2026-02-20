@@ -2,19 +2,21 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { User, Settings, LogOut, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Role } from '@prisma/client';
 
 /**
  * User Profile Dropdown Component
  * 
  * Client Component that displays a dropdown menu in the Navbar.
- * Shows user avatar/initials with links to Edit Profile, Settings, and Logout.
+ * Shows user avatar/initials with links to Edit Profile, Settings, Job Preferences (candidates), and Logout.
  */
 
 interface UserProfileDropdownProps {
   userEmail: string;
   userName?: string | null;
   avatarUrl?: string | null;
+  userRole?: Role;
   logoutAction: () => Promise<void>;
 }
 
@@ -33,6 +35,7 @@ export default function UserProfileDropdown({
   userEmail,
   userName,
   avatarUrl,
+  userRole,
   logoutAction,
 }: UserProfileDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -112,6 +115,17 @@ export default function UserProfileDropdown({
               <Settings className="w-4 h-4" />
               Settings
             </Link>
+
+            {userRole === Role.USER && (
+              <Link
+                href="/preferences"
+                onClick={() => setIsOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Job Preferences
+              </Link>
+            )}
 
             {/* Logout Button */}
             <form action={logoutAction}>

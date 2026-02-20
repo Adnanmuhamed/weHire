@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getCurrentUser } from '@/lib/auth';
-import { getJobById } from '@/services/job.service';
+import { getJobById } from '@/app/actions/public-job';
 import { db } from '@/lib/db';
-import ApplyCTA from '@/components/apply-cta';
 import { JobType, Role } from '@prisma/client';
 import { Briefcase, MapPin, Calendar, DollarSign, User, ExternalLink, Building2 } from 'lucide-react';
+import ApplyButton from '@/components/apply-button';
 
 /**
  * Job Details Page
@@ -53,12 +53,14 @@ export default async function JobDetailsPage({ params }: PageProps) {
   const { jobId } = await params;
   const user = await getCurrentUser();
 
-  // Fetch job details using service directly
-  const job = await getJobById(jobId);
+  // Fetch job details using server action
+  const result = await getJobById(jobId);
   
-  if (!job) {
+  if (!result.success || !result.job) {
     notFound();
   }
+
+  const job = result.job;
 
   // Check if user has already applied (only for seekers)
   let hasApplied = false;
@@ -188,11 +190,7 @@ export default async function JobDetailsPage({ params }: PageProps) {
 
               {/* Apply CTA */}
               <div className="sticky top-24">
-                <ApplyCTA
-                  jobId={jobId}
-                  currentUser={user}
-                  hasApplied={hasApplied}
-                />
+                <ApplyButton jobId={jobId} hasApplied={hasApplied} />
               </div>
             </aside>
           </div>

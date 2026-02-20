@@ -21,6 +21,7 @@ export interface ApplicationWithJob {
   job: {
     id: string;
     title: string;
+    location: string;
     status: JobStatus;
     company: {
       id: string;
@@ -214,6 +215,7 @@ export async function getUserApplications(
         select: {
           id: true,
           title: true,
+          location: true,
           status: true,
           company: {
             select: {

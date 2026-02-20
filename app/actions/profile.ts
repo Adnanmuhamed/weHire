@@ -1,99 +1,18 @@
 'use server';
 
-/**
- * Profile Server Actions
- * 
- * Server-side actions for updating user profiles.
- * Includes validation and revalidation for immediate UI updates.
- */
-
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
+import { ProfileFormSchema } from '@/lib/validators';
+import type { ProfileFormInput } from '@/lib/validators';
 
-export interface UpdateProfileInput {
-  userId: string;
-  fullName: string;
-  headline: string | null;
-  bio: string | null;
-  skills: string[];
-  experience: number;
-  resumeUrl: string | null;
-  avatarUrl: string | null;
-  college: string | null;
-  degree: string | null;
-  currentCompany: string | null;
-  location: string | null;
-  mobile: string;
-}
+export type { ProfileFormInput } from '@/lib/validators';
 
 export interface UpdateProfileResult {
   success?: boolean;
   error?: string;
 }
 
-/**
- * Validate profile input
- */
-function validateProfileInput(input: UpdateProfileInput): string | null {
-  if (!input.fullName || input.fullName.trim().length === 0) {
-    return 'Full name is required';
-  }
-  if (input.fullName.trim().length < 2) {
-    return 'Full name must be at least 2 characters long';
-  }
-  if (input.fullName.length > 200) {
-    return 'Full name must not exceed 200 characters';
-  }
-
-  if (input.headline && input.headline.length > 200) {
-    return 'Headline must not exceed 200 characters';
-  }
-
-  if (input.bio && input.bio.length > 5000) {
-    return 'Bio must not exceed 5000 characters';
-  }
-
-  if (input.experience < 0 || input.experience > 50) {
-    return 'Experience must be between 0 and 50 years';
-  }
-
-  if (input.skills.length > 50) {
-    return 'Maximum 50 skills allowed';
-  }
-
-  // Validate mobile number (required)
-  if (!input.mobile || input.mobile.trim().length === 0) {
-    return 'Mobile number is required';
-  }
-
-  // Validate mobile number format (basic validation)
-  const mobileRegex = /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/;
-  if (!mobileRegex.test(input.mobile.trim())) {
-    return 'Invalid mobile number format';
-  }
-
-  // Validate URLs if provided (only validate non-empty strings)
-  if (input.avatarUrl) {
-    const trimmed = input.avatarUrl.trim();
-    if (trimmed.length > 0 && !isValidUrl(trimmed)) {
-      return 'Avatar URL must be a valid URL';
-    }
-  }
-
-  if (input.resumeUrl) {
-    const trimmed = input.resumeUrl.trim();
-    if (trimmed.length > 0 && !isValidUrl(trimmed)) {
-      return 'Resume URL must be a valid URL';
-    }
-  }
-
-  return null;
-}
-
-/**
- * Simple URL validation
- */
 function isValidUrl(url: string): boolean {
   try {
     new URL(url);
@@ -104,69 +23,85 @@ function isValidUrl(url: string): boolean {
 }
 
 /**
- * Update user profile
- * 
- * Creates profile if it doesn't exist, updates if it does.
- * Revalidates paths to ensure UI updates immediately.
+ * Update candidate profile.
+ * Auth: logged-in user. Validates with Zod, updates Profile and optionally User.mobileNumber.
  */
 export async function updateProfile(
-  input: UpdateProfileInput
+  data: ProfileFormInput
 ): Promise<UpdateProfileResult> {
   try {
-    // Validate input
-    const validationError = validateProfileInput(input);
-    if (validationError) {
-      return { error: validationError };
+    const parsed = ProfileFormSchema.safeParse(data);
+    if (!parsed.success) {
+      const first = parsed.error.errors[0];
+      return { error: first?.message ?? 'Invalid profile data' };
     }
 
-    // Verify user is authenticated and matches the userId
     const user = await getCurrentUser();
     if (!user) {
       return { error: 'Not authenticated' };
     }
 
-    if (user.id !== input.userId) {
-      return { error: 'Unauthorized' };
+    const {
+      fullName,
+      headline,
+      bio,
+      skills,
+      experience,
+      resumeUrl,
+      location,
+      mobile,
+    } = parsed.data;
+
+    const resumeTrimmed = resumeUrl?.trim();
+    if (resumeTrimmed && !isValidUrl(resumeTrimmed)) {
+      return { error: 'Resume must be a valid URL' };
     }
 
-    // Upsert profile (create if doesn't exist, update if it does)
-    await db.profile.upsert({
-      where: { userId: input.userId },
-      create: {
-        userId: input.userId,
-        fullName: input.fullName.trim(),
-        headline: input.headline?.trim() || null,
-        bio: input.bio?.trim() || null,
-        skills: input.skills,
-        experience: input.experience,
-        resumeUrl: input.resumeUrl?.trim() || null,
-        avatarUrl: input.avatarUrl?.trim() || null,
-        college: input.college?.trim() || null,
-        degree: input.degree?.trim() || null,
-        currentCompany: input.currentCompany?.trim() || null,
-        location: input.location?.trim() || null,
-        mobile: input.mobile.trim(),
-      },
-      update: {
-        fullName: input.fullName.trim(),
-        headline: input.headline?.trim() || null,
-        bio: input.bio?.trim() || null,
-        skills: input.skills,
-        experience: input.experience,
-        resumeUrl: input.resumeUrl?.trim() || null,
-        avatarUrl: input.avatarUrl?.trim() || null,
-        college: input.college?.trim() || null,
-        degree: input.degree?.trim() || null,
-        currentCompany: input.currentCompany?.trim() || null,
-        location: input.location?.trim() || null,
-        mobile: input.mobile.trim(),
-      },
+    const skillsArray = skills
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    await db.$transaction(async (tx) => {
+      await tx.profile.upsert({
+        where: { userId: user.id },
+        create: {
+          userId: user.id,
+          fullName: fullName.trim(),
+          headline: headline?.trim() || null,
+          bio: (bio?.trim() ?? '').slice(0, 500) || null,
+          skills: skillsArray,
+          experience,
+          resumeUrl: resumeTrimmed || null,
+          location: location?.trim() || null,
+          mobile: mobile?.trim() || null,
+        },
+        update: {
+          fullName: fullName.trim(),
+          headline: headline?.trim() || null,
+          bio: (bio?.trim() ?? '').slice(0, 500) || null,
+          skills: skillsArray,
+          experience,
+          resumeUrl: resumeTrimmed || null,
+          location: location?.trim() || null,
+          mobile: mobile?.trim() || null,
+        },
+      });
+
+      if (mobile != null && mobile.trim() !== '') {
+        await tx.user.update({
+          where: { id: user.id },
+          // Sync mobile to User; schema has User.mobileNumber
+          data: { mobileNumber: mobile.trim() } as Parameters<typeof tx.user.update>[0]['data'],
+        });
+      }
     });
 
-    // Revalidate paths to ensure sidebar and navbar update
     revalidatePath('/profile');
+    revalidatePath('/dashboard');
     revalidatePath('/');
     revalidatePath('/jobs');
+    revalidatePath('/applications');
 
     return { success: true };
   } catch (error) {
@@ -174,4 +109,3 @@ export async function updateProfile(
     return { error: 'Failed to update profile. Please try again.' };
   }
 }
-

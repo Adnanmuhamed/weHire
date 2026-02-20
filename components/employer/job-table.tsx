@@ -53,7 +53,7 @@ function formatDate(date: string): string {
 export default function JobTable({ jobs }: JobTableProps) {
   if (jobs.length === 0) {
     return (
-      <div className="p-8 text-center border border-foreground/10 rounded-lg bg-background">
+      <div className="p-8 text-center">
         <svg
           className="mx-auto h-12 w-12 text-foreground/40"
           fill="none"
@@ -68,10 +68,16 @@ export default function JobTable({ jobs }: JobTableProps) {
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-4 text-sm font-semibold text-foreground">No jobs posted</h3>
-        <p className="mt-2 text-sm text-foreground/60">
+        <h3 className="mt-4 text-sm font-semibold text-foreground">No jobs found</h3>
+        <p className="mt-2 text-sm text-foreground/60 mb-4">
           Get started by creating your first job posting.
         </p>
+        <Link
+          href="/employer/jobs/new"
+          className="inline-flex items-center bg-foreground text-background px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity text-sm"
+        >
+          Post Your First Job
+        </Link>
       </div>
     );
   }
@@ -119,7 +125,12 @@ export default function JobTable({ jobs }: JobTableProps) {
                   </span>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground/70">
-                  {job.applicationCount}
+                  <Link
+                    href={`/employer/jobs/${job.id}/applications`}
+                    className="text-foreground font-medium hover:underline"
+                  >
+                    {job.applicationCount}
+                  </Link>
                 </td>
                 <td className="px-4 py-4 whitespace-nowrap text-sm text-foreground/60">
                   {formatDate(job.createdAt)}

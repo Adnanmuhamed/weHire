@@ -40,6 +40,25 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     ? (typeof redirectParam === 'string' ? redirectParam : redirectParam[0] || null)
     : null;
 
-  return <LoginForm redirectParam={redirectValue} />;
+  return (
+    <div className="min-h-[calc(100vh-4rem)] grid grid-cols-1 md:grid-cols-2">
+      {/* Left: Welcome / testimonial */}
+      <div className="hidden md:flex flex-col justify-center px-12 lg:px-20 py-16 bg-gradient-to-br from-foreground/10 via-foreground/5 to-background border-r border-foreground/10">
+        <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+          Welcome back
+        </h2>
+        <p className="text-lg text-foreground/70 max-w-md">
+          Sign in to access your account, manage applications, and discover your next opportunity.
+        </p>
+        <blockquote className="mt-12 pl-4 border-l-4 border-foreground/30 text-foreground/80 italic">
+          &ldquo;JobPortal made it easy to find roles that fit my skills. I landed my current role in two weeks.&rdquo;
+        </blockquote>
+      </div>
+      {/* Right: Login form */}
+      <div className="flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12">
+        <LoginForm redirectParam={redirectValue} />
+      </div>
+    </div>
+  );
 }
 

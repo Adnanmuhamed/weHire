@@ -25,6 +25,7 @@ interface Application {
   job: {
     id: string;
     title: string;
+    location: string;
     company: {
       id: string;
       name: string;
@@ -58,6 +59,7 @@ async function fetchApplications(): Promise<ApplicationsResponse> {
       job: {
         id: app.job.id,
         title: app.job.title,
+        location: app.job.location,
         company: {
           id: app.job.company.id,
           name: app.job.company.name,
