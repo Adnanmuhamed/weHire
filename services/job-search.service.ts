@@ -37,6 +37,7 @@ export interface JobSearchResult {
   salaryMin: number | null;
   salaryMax: number | null;
   companyName: string;
+  companyId: string;
   createdAt: Date;
   isSaved?: boolean; // Whether the job is saved by the current user
 }
@@ -237,6 +238,7 @@ export async function searchJobs(
         createdAt: true,
         company: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -258,6 +260,7 @@ export async function searchJobs(
     salaryMin: job.salaryMin,
     salaryMax: job.salaryMax,
     companyName: job.company.name,
+    companyId: job.company.id,
     createdAt: job.createdAt,
     isSaved: params?.userId ? savedJobIds.includes(job.id) : undefined,
   }));

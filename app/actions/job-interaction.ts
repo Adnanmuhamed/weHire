@@ -62,7 +62,9 @@ export async function getSavedJobs(): Promise<GetSavedJobsResult> {
     requireUser(user);
 
     const saved = await db.savedJob.findMany({
-      where: { userId: user.id },
+      where: { userId: user.id, job: { status: JobStatus.OPEN } },
+      orderBy: { createdAt: 'desc' },
+      take: 1,
       select: {
         job: {
           select: {
@@ -248,7 +250,6 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
       };
     }
 
-    const where: Record<string, unknown> = { status: JobStatus.OPEN };
     const orConditions: Record<string, unknown>[] = [];
 
     if (prefs.locations.length > 0) {
@@ -268,31 +269,18 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
         workMode: { in: prefs.workModes },
       });
     }
-    if (orConditions.length > 0) {
-      where.OR = orConditions;
+    if (prefs.expectedSalaryMin != null) {
+      orConditions.push({
+        salaryMin: { gte: prefs.expectedSalaryMin },
+      });
     }
 
-    if (prefs.expectedSalaryMin != null || prefs.expectedSalaryMax != null) {
-      const salaryAnd: Record<string, unknown>[] = [];
-      if (prefs.expectedSalaryMax != null) {
-        salaryAnd.push({
-          OR: [
-            { salaryMin: { lte: prefs.expectedSalaryMax } },
-            { salaryMin: null },
-          ],
-        });
-      }
-      if (prefs.expectedSalaryMin != null) {
-        salaryAnd.push({
-          OR: [
-            { salaryMax: { gte: prefs.expectedSalaryMin } },
-            { salaryMax: null },
-          ],
-        });
-      }
-      if (salaryAnd.length > 0) {
-        where.AND = [...((where.AND as unknown[]) ?? []), ...salaryAnd];
-      }
+    const where: Record<string, unknown> = {
+      status: JobStatus.OPEN,
+    };
+
+    if (orConditions.length > 0) {
+      where.OR = orConditions;
     }
 
     const jobs = await db.job.findMany({

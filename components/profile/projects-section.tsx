@@ -19,9 +19,10 @@ interface ProjectItem {
 
 interface ProjectsSectionProps {
   projects: ProjectItem[];
+  readOnly?: boolean;
 }
 
-export default function ProjectsSection({ projects }: ProjectsSectionProps) {
+export default function ProjectsSection({ projects, readOnly = false }: ProjectsSectionProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -71,14 +72,16 @@ export default function ProjectsSection({ projects }: ProjectsSectionProps) {
         <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wide">
           Projects
         </h2>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
-        >
-          <Plus className="w-4 h-4" />
-          Add Project
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
+          >
+            <Plus className="w-4 h-4" />
+            Add Project
+          </button>
+        )}
       </div>
       <ul className="space-y-4">
         {projects.length === 0 ? (
@@ -109,21 +112,23 @@ export default function ProjectsSection({ projects }: ProjectsSectionProps) {
                     </a>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(p.id)}
-                  className="p-1.5 text-foreground/50 hover:text-red-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(p.id)}
+                    className="p-1.5 text-foreground/50 hover:text-red-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </li>
             );
           })
         )}
       </ul>
 
-      {modalOpen && (
+      {!readOnly && modalOpen && (
         <>
           <div
             className="fixed inset-0 bg-black/50 z-50"

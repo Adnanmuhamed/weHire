@@ -111,7 +111,7 @@ export default async function JobDetailsPage({ params }: PageProps) {
                   {job.title}
                 </h1>
                 <Link
-                  href={`/companies/${job.company.id}`}
+                  href={`/company/${job.company.id}`}
                   className="text-xl text-foreground/70 font-medium hover:text-foreground transition-colors inline-flex items-center gap-1"
                 >
                   {job.company.name}
@@ -167,7 +167,12 @@ export default async function JobDetailsPage({ params }: PageProps) {
                   <h3 className="text-lg font-semibold text-foreground">Company</h3>
                 </div>
                 <div>
-                  <p className="font-medium text-foreground">{job.company.name}</p>
+                  <Link
+                    href={`/company/${job.company.id}`}
+                    className="font-medium text-foreground hover:text-foreground/80 hover:underline transition-colors"
+                  >
+                    {job.company.name}
+                  </Link>
                   {job.company.location && (
                     <p className="text-sm text-foreground/70 mt-1 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
@@ -185,6 +190,12 @@ export default async function JobDetailsPage({ params }: PageProps) {
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
+                  <Link
+                    href={`/company/${job.company.id}`}
+                    className="text-sm text-foreground/70 hover:text-foreground mt-3 inline-flex items-center gap-1 transition-colors font-medium"
+                  >
+                    View Company Profile →
+                  </Link>
                 </div>
               </div>
 

@@ -30,6 +30,7 @@ export interface EmployerOverview {
 export interface EmployerJob {
   id: string;
   title: string;
+  location?: string | null;
   status: JobStatus;
   applicationCount: number;
   createdAt: Date;
@@ -216,6 +217,7 @@ export async function getEmployerJobs(
     select: {
       id: true,
       title: true,
+      location: true,
       status: true,
       createdAt: true,
       _count: {
@@ -233,12 +235,14 @@ export async function getEmployerJobs(
   return jobs.map((job: {
     id: string;
     title: string;
+    location: string | null;
     status: JobStatus;
     createdAt: Date;
     _count: { applications: number };
   }) => ({
     id: job.id,
     title: job.title,
+    location: job.location,
     status: job.status,
     applicationCount: job._count.applications,
     createdAt: job.createdAt,

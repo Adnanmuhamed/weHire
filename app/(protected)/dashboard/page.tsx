@@ -12,9 +12,10 @@ import {
   getLatestJobs,
 } from '@/app/actions/job-interaction';
 import { getUserApplications } from '@/services/application.service';
+import { getCandidateReviews } from '@/app/actions/candidate-profile';
 import JobCard from '@/components/job-card';
 import { JobType } from '@prisma/client';
-import { Settings2 } from 'lucide-react';
+import { Settings2, Star } from 'lucide-react';
 
 /** Active = not rejected (still in progress or hired). */
 function getActiveApplicationCount(
@@ -58,7 +59,7 @@ export default async function CandidateDashboardPage() {
 
   const authUser = requireUser(user);
 
-  const [profile, applications, savedResult, prefsResult, recommendedResult] =
+  const [profile, applications, savedResult, prefsResult, recommendedResult, reviewsResult] =
     await Promise.all([
       db.profile.findUnique({
         where: { userId: user.id },
@@ -79,11 +80,15 @@ export default async function CandidateDashboardPage() {
       getSavedJobs(),
       getJobPreferences(),
       getRecommendedJobs(),
+      getCandidateReviews(),
     ]);
 
   const activeApplicationsCount = getActiveApplicationCount(applications);
-  const savedJobs = (savedResult.jobs ?? []).slice(0, 3);
+  const savedJobs = (savedResult.jobs ?? []).slice(0, 1);
   const preferences = prefsResult.preferences ?? null;
+  const reviews = reviewsResult.reviews ?? [];
+  const averageRating = reviewsResult.averageRating ?? 0;
+  const recentReviews = reviews.slice(0, 2);
   const hasPreferences =
     preferences &&
     (preferences.locations.length > 0 ||
@@ -92,9 +97,20 @@ export default async function CandidateDashboardPage() {
   const recommendedJobs = recommendedResult.jobs ?? [];
   const showLatestFallback = hasPreferences && recommendedJobs.length === 0;
   const latestResult = showLatestFallback ? await getLatestJobs(15) : null;
+  const otherJobsResult =
+    hasPreferences && !showLatestFallback ? await getLatestJobs(15) : null;
+
   const latestJobs = latestResult?.jobs ?? [];
+  const otherJobsSource = otherJobsResult?.jobs ?? [];
 
   const displayJobs = showLatestFallback ? latestJobs : recommendedJobs;
+  const recommendedJobIds = new Set(recommendedJobs.map((j) => j.id));
+  const otherJobs =
+    hasPreferences && !showLatestFallback
+      ? otherJobsSource
+          .filter((j) => !recommendedJobIds.has(j.id))
+          .slice(0, 15)
+      : [];
   const sectionTitle = showLatestFallback
     ? 'Latest Jobs'
     : hasPreferences
@@ -202,6 +218,56 @@ export default async function CandidateDashboardPage() {
                 </Link>
               )}
             </div>
+            <div className="rounded-lg border border-foreground/10 bg-background p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                <Star className="w-4 h-4" />
+                My Reviews
+              </h3>
+              {reviews.length === 0 ? (
+                <p className="text-sm text-foreground/60">
+                  No reviews yet.
+                </p>
+              ) : (
+                <>
+                  <div className="mb-3">
+                    <p className="text-2xl font-bold text-foreground">
+                      {averageRating.toFixed(1)}/5
+                    </p>
+                    <p className="text-xs text-foreground/60">
+                      Average Rating ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
+                    </p>
+                  </div>
+                  <ul className="space-y-3">
+                    {recentReviews.map((review) => (
+                      <li key={review.id} className="border-t border-foreground/10 pt-2">
+                        <div className="flex items-center gap-1 mb-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3 h-3 ${
+                                i < review.rating
+                                  ? 'fill-foreground text-foreground'
+                                  : 'text-foreground/20'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-xs text-foreground/80 line-clamp-2">
+                          {review.comment}
+                        </p>
+                        <p className="text-xs text-foreground/50 mt-1">
+                          {new Date(review.createdAt).toLocaleDateString('en-IN', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           </aside>
 
           {/* Column 2: Search + Recommendations */}
@@ -290,6 +356,7 @@ export default async function CandidateDashboardPage() {
                         salaryMin={job.salaryMin}
                         salaryMax={job.salaryMax}
                         companyName={job.company.name}
+                        companyId={job.company.id}
                         createdAt={job.createdAt}
                         isSaved={false}
                       />
@@ -298,6 +365,34 @@ export default async function CandidateDashboardPage() {
                 </ul>
               )}
             </section>
+
+            {hasPreferences && !showLatestFallback && otherJobs.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground">
+                    You might like
+                  </h3>
+                </div>
+                <ul className="space-y-4">
+                  {otherJobs.map((job) => (
+                    <li key={job.id}>
+                      <JobCard
+                        jobId={job.id}
+                        title={job.title}
+                        location={job.location}
+                        jobType={job.jobType as JobType}
+                        salaryMin={job.salaryMin}
+                        salaryMax={job.salaryMax}
+                        companyName={job.company.name}
+                        companyId={job.company.id}
+                        createdAt={job.createdAt}
+                        isSaved={false}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
 
           {/* Column 3: Profile Completeness */}

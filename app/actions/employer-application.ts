@@ -3,6 +3,7 @@
 import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { Role } from '@prisma/client';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Get full applicant profile for employer view.
@@ -23,6 +24,7 @@ export interface ApplicantProfileResult {
       email: string;
       mobileNumber: string | null;
       profile: {
+        id: string;
         fullName: string;
         headline: string | null;
         profileSummary: string | null;
@@ -137,6 +139,7 @@ export async function getApplicantProfile(
           mobileNumber: application.user.mobileNumber,
           profile: application.user.profile
             ? {
+                id: application.user.profile.id,
                 fullName: application.user.profile.fullName,
                 headline: application.user.profile.headline,
                 profileSummary: application.user.profile.profileSummary,
@@ -165,5 +168,77 @@ export async function getApplicantProfile(
   } catch (e) {
     console.error('getApplicantProfile error:', e);
     return { error: 'Failed to load applicant profile.' };
+  }
+}
+
+/**
+ * Add a review for a candidate.
+ * Auth: EMPLOYER only. Security: verify employer received application from this candidate.
+ */
+export interface AddReviewInput {
+  candidateId: string;
+  rating: number;
+  comment: string;
+}
+
+export interface AddReviewResult {
+  success?: boolean;
+  error?: string;
+  reviewId?: string;
+}
+
+export async function addReview(
+  data: AddReviewInput
+): Promise<AddReviewResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    if (user.role !== Role.EMPLOYER) {
+      return { error: 'Only employers can add reviews' };
+    }
+
+    if (data.rating < 1 || data.rating > 5) {
+      return { error: 'Rating must be between 1 and 5' };
+    }
+
+    const company = await db.company.findUnique({
+      where: { ownerId: user.id },
+      select: { id: true },
+    });
+    if (!company) return { error: 'Company not found' };
+
+    const profile = await db.profile.findUnique({
+      where: { id: data.candidateId },
+      select: { userId: true },
+    });
+    if (!profile) return { error: 'Candidate not found' };
+
+    const application = await db.application.findFirst({
+      where: {
+        userId: profile.userId,
+        job: { companyId: company.id },
+      },
+    });
+    if (!application) {
+      return { error: 'You can only review candidates who applied to your jobs' };
+    }
+
+    const review = await db.review.create({
+      data: {
+        candidateId: data.candidateId,
+        employerId: user.id,
+        rating: data.rating,
+        comment: data.comment.trim(),
+      },
+      select: { id: true },
+    });
+
+    revalidatePath(`/employer/applications/${application.id}`);
+    revalidatePath('/dashboard');
+
+    return { success: true, reviewId: review.id };
+  } catch (e) {
+    console.error('addReview error:', e);
+    return { error: 'Failed to add review' };
   }
 }

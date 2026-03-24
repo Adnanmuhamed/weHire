@@ -2,7 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { User, Settings, LogOut, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import {
+  User,
+  Settings,
+  LogOut,
+  ChevronDown,
+  SlidersHorizontal,
+  Briefcase,
+  Building2,
+} from 'lucide-react';
 import { Role } from '@prisma/client';
 
 /**
@@ -98,33 +106,66 @@ export default function UserProfileDropdown({
             </div>
 
             {/* Menu Items */}
-            <Link
-              href="/profile"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
-            >
-              <User className="w-4 h-4" />
-              Edit Profile
-            </Link>
+            {userRole === Role.EMPLOYER ? (
+              <>
+                <Link
+                  href="/employer"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Manage Jobs
+                </Link>
 
-            <Link
-              href="/settings"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
-            >
-              <Settings className="w-4 h-4" />
-              Settings
-            </Link>
+                <Link
+                  href="/employer/company-profile"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <Building2 className="w-4 h-4" />
+                  Company Profile
+                </Link>
 
-            {userRole === Role.USER && (
-              <Link
-                href="/preferences"
-                onClick={() => setIsOpen(false)}
-                className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Job Preferences
-              </Link>
+                <Link
+                  href="/settings"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <User className="w-4 h-4" />
+                  Edit Profile
+                </Link>
+
+                <Link
+                  href="/settings"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                >
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </Link>
+
+                {userRole === Role.USER && (
+                  <Link
+                    href="/preferences"
+                    onClick={() => setIsOpen(false)}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    Job Preferences
+                  </Link>
+                )}
+              </>
             )}
 
             {/* Logout Button */}

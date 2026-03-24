@@ -9,8 +9,9 @@ import type { ProfileFormInput } from '@/lib/validators';
 
 interface KeySkillsSectionProps {
   skills: string[];
+  readOnly?: boolean;
   /** Current profile fields required for updateProfile */
-  profilePayload: {
+  profilePayload?: {
     fullName: string;
     headline?: string;
     bio?: string;
@@ -21,13 +22,14 @@ interface KeySkillsSectionProps {
   };
 }
 
-export default function KeySkillsSection({ skills, profilePayload }: KeySkillsSectionProps) {
+export default function KeySkillsSection({ skills, readOnly = false, profilePayload }: KeySkillsSectionProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(skills.join(', '));
   const [loading, setLoading] = useState(false);
 
   const handleSave = async () => {
+    if (!profilePayload) return;
     setLoading(true);
     const payload: ProfileFormInput = {
       ...profilePayload,
@@ -106,7 +108,7 @@ export default function KeySkillsSection({ skills, profilePayload }: KeySkillsSe
             </div>
           )}
         </div>
-        {!isEditing && (
+        {!readOnly && !isEditing && (
           <button
             type="button"
             onClick={() => setIsEditing(true)}

@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { requireEmployer } from '@/lib/rbac';
-import { getEmployerOverview } from '@/services/employer-dashboard.service';
-import OverviewCards from '@/components/employer/overview-cards';
-import RecentApplications from '@/components/employer/recent-applications';
-import { ApplicationStatus } from '@prisma/client';
+import { getEmployerJobs, EmployerJob } from '@/services/employer-dashboard.service';
+import { JobStatus } from '@prisma/client';
+import { ExternalLink, Briefcase } from 'lucide-react';
+import { db } from '@/lib/db';
 
 /**
  * Employer Dashboard Overview Page
@@ -15,107 +16,172 @@ import { ApplicationStatus } from '@prisma/client';
  * FIX: Calls service directly instead of making HTTP request to avoid cookie forwarding issues.
  */
 
-interface RecentApplication {
-  applicationId: string;
-  jobId: string;
-  jobTitle: string;
-  status: ApplicationStatus;
-  createdAt: string;
-}
-
-interface EmployerOverview {
-  totalJobs: number;
-  openJobs: number;
-  totalApplications: number;
-  applicationsByStatus: {
-    status: ApplicationStatus;
-    count: number;
-  }[];
-  recentApplications: RecentApplication[];
-}
-
-async function fetchOverview(): Promise<EmployerOverview | null> {
-  try {
-    // Get current user and validate authentication
-    const user = await getCurrentUser();
-    const authenticatedUser = requireEmployer(user);
-
-    // Call service directly instead of HTTP request
-    // This ensures cookies are available and avoids redirect loops
-    const overview = await getEmployerOverview(authenticatedUser);
-
-    // Transform service data to match page interface
-    // Service returns Date objects, page expects ISO strings
-    const transformedOverview: EmployerOverview = {
-      totalJobs: overview.totalJobs,
-      openJobs: overview.openJobs,
-      totalApplications: overview.totalApplications,
-      applicationsByStatus: overview.applicationsByStatus,
-      recentApplications: overview.recentApplications.map((app) => ({
-        applicationId: app.applicationId,
-        jobId: app.jobId,
-        jobTitle: app.jobTitle,
-        status: app.status,
-        createdAt: app.createdAt.toISOString(),
-      })),
-    };
-
-    return transformedOverview;
-  } catch (error: any) {
-    // Handle authentication/authorization errors
-    if (error.name === 'AuthenticationError' || error.name === 'AuthorizationError') {
-      // Preserve redirect param to prevent infinite loops
-      redirect('/login?redirect=/employer');
-    }
-    console.error('Failed to fetch employer overview:', error);
-    return null;
-  }
+function formatJobDate(date: Date): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(date);
 }
 
 export default async function EmployerDashboardPage() {
-  const overview = await fetchOverview();
+  const user = await getCurrentUser();
+  const authenticatedUser = requireEmployer(user);
 
-  if (!overview) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-6xl">
-          <div className="text-center py-12">
-            <p className="text-foreground/70">Failed to load dashboard data.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [jobs, company] = await Promise.all([
+    getEmployerJobs(authenticatedUser),
+    db.company.findUnique({
+      where: { ownerId: authenticatedUser.id },
+      select: { id: true },
+    }),
+  ]);
+
+  const companyId = company?.id || null;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-6xl">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            Employer Dashboard
-          </h1>
-          <p className="text-foreground/70">
-            Overview of your job postings and applications
-          </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
+                Manage Jobs
+              </h1>
+              <p className="text-foreground/70">
+                View, track, and manage all your job postings in one place.
+              </p>
+            </div>
+            {companyId && (
+              <Link
+                href={`/company/${companyId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                <ExternalLink className="w-4 h-4" />
+                View Public Profile
+              </Link>
+            )}
+          </div>
         </div>
 
-        {/* Overview Cards */}
-        <div className="mb-8">
-          <OverviewCards
-            totalJobs={overview.totalJobs}
-            openJobs={overview.openJobs}
-            totalApplications={overview.totalApplications}
-          />
+        {/* Top bar */}
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-foreground/70">
+            <Briefcase className="w-4 h-4" />
+            <span>
+              {jobs.length === 0
+                ? 'You have not posted any jobs yet.'
+                : `You have ${jobs.length} job${jobs.length === 1 ? '' : 's'} posted.`}
+            </span>
+          </div>
+          <Link
+            href="/employer/jobs/new"
+            className="inline-flex items-center gap-2 rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background shadow-sm hover:opacity-90 transition-opacity"
+          >
+            Post New Job
+          </Link>
         </div>
 
-        {/* Recent Applications */}
-        <div>
-          <h2 className="text-xl font-semibold text-foreground mb-4">
-            Recent Applications
-          </h2>
-          <RecentApplications applications={overview.recentApplications} />
-        </div>
+        {/* Jobs table / empty state */}
+        {jobs.length === 0 ? (
+          <div className="mt-8 flex flex-col items-center justify-center rounded-xl border border-dashed border-foreground/20 bg-muted/40 px-6 py-12 text-center">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-foreground/10">
+              <Briefcase className="h-6 w-6 text-foreground/80" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              Start hiring with your first job
+            </h2>
+            <p className="mb-6 max-w-md text-sm text-foreground/70">
+              Post your first role in minutes and start receiving quality applications from candidates.
+            </p>
+            <Link
+              href="/employer/jobs/new"
+              className="inline-flex items-center gap-2 rounded-md bg-foreground px-5 py-2.5 text-sm font-medium text-background shadow-sm hover:opacity-90 transition-opacity"
+            >
+              Post Your First Job
+            </Link>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-foreground/10 bg-background shadow-sm">
+            <table className="min-w-full divide-y divide-foreground/10 text-sm">
+              <thead className="bg-muted/60">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    Job
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    Posted
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    Applications
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-foreground/10">
+                {jobs.map((job: EmployerJob) => (
+                  <tr key={job.id} className="hover:bg-muted/40">
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-medium text-foreground">
+                        {job.title}
+                      </div>
+                      <div className="text-xs text-foreground/60 mt-0.5">
+                        {job.location ? job.location : 'Location not specified'}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-top text-sm text-foreground/70 whitespace-nowrap">
+                      {formatJobDate(job.createdAt)}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
+                          job.status === JobStatus.OPEN
+                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+                            : 'bg-foreground/10 text-foreground/70'
+                        }`}
+                      >
+                        {job.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 align-top text-sm">
+                      <Link
+                        href={`/employer/jobs/${job.id}/applications`}
+                        className="font-medium text-primary hover:underline"
+                      >
+                        {job.applicationCount}{' '}
+                        {job.applicationCount === 1 ? 'application' : 'applications'}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 align-top text-right text-sm">
+                      <div className="inline-flex items-center gap-2">
+                        <Link
+                          href={`/jobs/${job.id}`}
+                          className="text-foreground/70 hover:text-foreground underline-offset-2 hover:underline"
+                        >
+                          View Details
+                        </Link>
+                        <span className="text-foreground/20">•</span>
+                        <Link
+                          href={`/employer/jobs/${job.id}/edit`}
+                          className="text-foreground/70 hover:text-foreground underline-offset-2 hover:underline"
+                        >
+                          Edit
+                        </Link>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

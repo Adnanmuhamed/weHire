@@ -18,7 +18,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const config = {
   matcher: [
-    '/((?!api/auth|api/jobs|login|signup|employer/signup|jobs|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api/auth|api/jobs|login|signup|employer-signup|employer/signup|jobs|company|_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

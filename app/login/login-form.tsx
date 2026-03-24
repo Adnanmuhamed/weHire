@@ -4,6 +4,7 @@
  * Login Form Component
  *
  * Client-side login form. Modern UI with large inputs and clear CTAs.
+ * Supports role-specific content when role=EMPLOYER is in the URL.
  */
 
 import { useState, FormEvent } from 'react';
@@ -12,13 +13,16 @@ import { loginUser } from '@/app/actions/auth';
 
 interface LoginFormProps {
   redirectParam: string | null;
+  roleParam: string | null;
 }
 
-export default function LoginForm({ redirectParam }: LoginFormProps) {
+export default function LoginForm({ redirectParam, roleParam }: LoginFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isEmployerPortal = roleParam === 'EMPLOYER';
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,7 +30,11 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
     setIsLoading(true);
 
     try {
-      const result = await loginUser({ email, password });
+      const result = await loginUser({
+        email,
+        password,
+        expectedRole: isEmployerPortal ? 'EMPLOYER' : undefined,
+      });
 
       if (!result.success || result.error) {
         setError(result.error || 'Login failed. Please try again.');
@@ -53,11 +61,18 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="mb-8">
+        {isEmployerPortal && (
+          <span className="inline-block px-3 py-1 text-xs font-medium bg-foreground/10 text-foreground rounded-full mb-3">
+            For Business
+          </span>
+        )}
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
-          Login to JobPortal
+          {isEmployerPortal ? 'Employer Portal Login' : 'Welcome Back'}
         </h1>
         <p className="text-foreground/70">
-          Welcome back. Enter your credentials to continue.
+          {isEmployerPortal
+            ? 'Sign in to manage your job postings, view applications, and hire top talent.'
+            : 'Sign in to apply for jobs and track your applications.'}
         </p>
       </div>
 
@@ -134,7 +149,7 @@ export default function LoginForm({ redirectParam }: LoginFormProps) {
       <p className="text-center text-sm text-foreground/70">
         Don&apos;t have an account?{' '}
         <Link
-          href="/signup"
+          href={isEmployerPortal ? '/employer-signup' : '/signup'}
           className="font-medium text-foreground hover:underline"
         >
           Sign up

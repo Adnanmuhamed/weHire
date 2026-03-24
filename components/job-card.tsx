@@ -21,6 +21,7 @@ export interface JobCardProps {
   salaryMin: number | null;
   salaryMax: number | null;
   companyName: string;
+  companyId: string;
   createdAt: Date;
   isSaved?: boolean;
 }
@@ -63,6 +64,7 @@ export default function JobCard({
   salaryMin,
   salaryMax,
   companyName,
+  companyId,
   createdAt,
   isSaved = false,
 }: JobCardProps) {
@@ -114,7 +116,13 @@ export default function JobCard({
               <h3 className="text-xl font-semibold text-foreground mb-1 hover:underline">
                 {title}
               </h3>
-              <p className="text-foreground/70 font-medium">{companyName}</p>
+              <Link
+                href={`/company/${companyId}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-foreground/70 font-medium hover:text-foreground hover:underline transition-colors inline-block"
+              >
+                {companyName}
+              </Link>
             </div>
 
         {/* Details */}

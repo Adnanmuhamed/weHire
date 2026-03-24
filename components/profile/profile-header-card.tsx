@@ -23,9 +23,10 @@ interface ProfileHeaderCardProps {
     portfolioUrl: string | null;
     updatedAt: Date;
   };
+  readOnly?: boolean;
 }
 
-export default function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
+export default function ProfileHeaderCard({ profile, readOnly = false }: ProfileHeaderCardProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -73,14 +74,16 @@ export default function ProfileHeaderCard({ profile }: ProfileHeaderCardProps) {
   return (
     <>
       <header className="border-b border-foreground/10 pb-6 mb-6 relative">
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="absolute top-0 right-0 p-2 text-foreground/60 hover:bg-foreground/10 rounded-md"
-          aria-label="Edit"
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="absolute top-0 right-0 p-2 text-foreground/60 hover:bg-foreground/10 rounded-md"
+            aria-label="Edit"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
         <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
           {profile.avatarUrl ? (
             <div className="relative w-20 h-20 rounded-full overflow-hidden bg-foreground/10 flex-shrink-0">

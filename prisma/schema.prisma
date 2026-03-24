@@ -70,6 +70,8 @@ model User {
   passwordHash  String
   role          Role     @default(USER)
   mobileNumber  String?
+  mobile        String?
+  designation   String?
   workStatus    WorkStatus?
   isActive      Boolean  @default(true)
   emailVerified Boolean  @default(false)
@@ -84,6 +86,7 @@ model User {
   applications   Application[]
   sessions       Session[]
   savedJobs      SavedJob[]
+  reviewsGiven   Review[]      @relation("EmployerReviews")
 
   @@index([role])
 }
@@ -129,7 +132,7 @@ model Profile {
   location        String?
   currentLocation String?
   mobile          String?
-  email           String?
+  email           String?   @unique
   availability    String?
   dob             DateTime?
   gender          String?
@@ -146,6 +149,7 @@ model Profile {
   employment   Employment[]
   projects     Project[]
   certificates Certificate[]
+  reviewsReceived Review[]   @relation("CandidateReviews")
 }
 
 model Education {
@@ -233,6 +237,20 @@ model Company {
   isVerified  Boolean     @default(false)
   type        CompanyType @default(STARTUP)
   size        String?
+  
+  accountType    String?
+  hiringFor      String?
+  employeeCount  String?
+  industryType   String?
+  websiteUrl     String?
+  foundedYear    String?
+  about          String?
+  address        String?
+  city           String?
+  state          String?
+  pincode        String?
+  gstin          String?
+  rating         Float?      @default(0.0)
 
   ownerId   String   @unique
   createdAt DateTime @default(now())
@@ -243,6 +261,7 @@ model Company {
 
   @@index([name])
   @@index([type])
+  @@index([industryType])
 }
 
 /* =========================
@@ -314,4 +333,23 @@ model SavedJob {
   @@unique([userId, jobId])
   @@index([userId])
   @@index([jobId])
+}
+
+/* =========================
+   REVIEWS
+========================= */
+
+model Review {
+  id          String   @id @default(cuid())
+  candidateId String
+  employerId  String
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+
+  candidate Profile @relation("CandidateReviews", fields: [candidateId], references: [id], onDelete: Cascade)
+  employer  User    @relation("EmployerReviews", fields: [employerId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
+  @@index([employerId])
 }

@@ -483,6 +483,67 @@ export async function updatePersonalDetails(
   }
 }
 
+/* ========== Reviews ========== */
+
+export interface CandidateReview {
+  id: string;
+  rating: number;
+  comment: string;
+  createdAt: Date;
+  employer: {
+    email: string;
+  };
+}
+
+export interface GetCandidateReviewsResult {
+  success?: boolean;
+  error?: string;
+  reviews?: CandidateReview[];
+  averageRating?: number;
+}
+
+export async function getCandidateReviews(): Promise<GetCandidateReviewsResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    const reviews = await db.review.findMany({
+      where: { candidateId: profile.id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        employer: {
+          select: { email: true },
+        },
+      },
+    });
+
+    const averageRating =
+      reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0;
+
+    return {
+      success: true,
+      reviews,
+      averageRating: Math.round(averageRating * 10) / 10,
+    };
+  } catch (e) {
+    console.error('getCandidateReviews error:', e);
+    return { error: 'Failed to load reviews' };
+  }
+}
+
 /* ========== Get full profile ========== */
 
 export interface ProfileDetailsResult {
@@ -568,9 +629,14 @@ export async function getProfileDetails(): Promise<ProfileDetailsResult> {
         employment: true,
         projects: true,
         certificates: true,
+        user: {
+          select: { email: true },
+        },
       },
     });
     if (!profile) return { error: 'Profile not found' };
+
+    const email = profile.email ?? profile.user.email;
 
     return {
       success: true,
@@ -595,7 +661,7 @@ export async function getProfileDetails(): Promise<ProfileDetailsResult> {
         location: profile.location,
         currentLocation: profile.currentLocation,
         mobile: profile.mobile,
-        email: profile.email,
+        email,
         availability: profile.availability,
         dob: profile.dob,
         gender: profile.gender,

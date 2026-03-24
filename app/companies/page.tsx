@@ -72,7 +72,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
               {companies.map((company) => (
                 <Link
                   key={company.id}
-                  href={`/companies/${company.id}`}
+                  href={`/company/${company.id}`}
                   className="block p-6 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-md transition-all"
                 >
                   <div className="flex flex-col items-center text-center gap-3">

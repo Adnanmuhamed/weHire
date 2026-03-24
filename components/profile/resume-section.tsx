@@ -8,6 +8,7 @@ import { updateResume } from '@/app/actions/candidate-profile';
 
 interface ResumeSectionProps {
   resumeUrl: string | null;
+  readOnly?: boolean;
 }
 
 function getFileName(url: string): string {
@@ -20,7 +21,7 @@ function getFileName(url: string): string {
   }
 }
 
-export default function ResumeSection({ resumeUrl }: ResumeSectionProps) {
+export default function ResumeSection({ resumeUrl, readOnly = false }: ResumeSectionProps) {
   const router = useRouter();
   const [isAdding, setIsAdding] = useState(false);
   const [urlInput, setUrlInput] = useState('');
@@ -76,16 +77,20 @@ export default function ResumeSection({ resumeUrl }: ResumeSectionProps) {
               </a>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleRemove}
-            disabled={loading}
-            className="p-2 text-foreground/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md disabled:opacity-50"
-            aria-label="Remove resume"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleRemove}
+              disabled={loading}
+              className="p-2 text-foreground/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md disabled:opacity-50"
+              aria-label="Remove resume"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
+      ) : readOnly ? (
+        <p className="text-foreground/60 text-sm">No resume uploaded.</p>
       ) : isAdding ? (
         <form onSubmit={handleAdd} className="space-y-3">
           <input

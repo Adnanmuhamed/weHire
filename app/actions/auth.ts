@@ -79,6 +79,8 @@ export async function registerUser(
 export interface LoginUserInput {
   email: string;
   password: string;
+  /** Expected portal: 'EMPLOYER' when logging in from employer portal, undefined for candidate portal */
+  expectedRole?: 'EMPLOYER';
 }
 
 export interface LoginUserResult {
@@ -120,6 +122,19 @@ export async function loginUser(
 
   if (!isValidPassword) {
     return { error: 'Invalid email or password.' };
+  }
+
+  // Role validation: ensure user logs in via the correct portal
+  const isEmployerPortal = input.expectedRole === 'EMPLOYER';
+  const isEmployerUser = user.role === Role.EMPLOYER;
+  const isCandidateUser = user.role === Role.USER;
+
+  if (isEmployerPortal && isCandidateUser) {
+    return { error: 'Please log in through the candidate portal.' };
+  }
+
+  if (!isEmployerPortal && isEmployerUser) {
+    return { error: 'Please log in through the employer portal.' };
   }
 
   const sessionToken = await createSession(user.id);

@@ -181,6 +181,7 @@ export async function applyToJob(
         select: {
           id: true,
           title: true,
+          location: true,
           status: true,
           company: {
             select: {

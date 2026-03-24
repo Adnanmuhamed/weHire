@@ -19,6 +19,7 @@ interface EducationItem {
 
 interface EducationSectionProps {
   education: EducationItem[];
+  readOnly?: boolean;
 }
 
 function formatYearRange(start: number | null, end: number | null) {
@@ -28,7 +29,7 @@ function formatYearRange(start: number | null, end: number | null) {
   return `${s} – ${e}`;
 }
 
-export default function EducationSection({ education }: EducationSectionProps) {
+export default function EducationSection({ education, readOnly = false }: EducationSectionProps) {
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -86,14 +87,16 @@ export default function EducationSection({ education }: EducationSectionProps) {
         <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wide">
           Education
         </h2>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
-        >
-          <Plus className="w-4 h-4" />
-          Add Education
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
+          >
+            <Plus className="w-4 h-4" />
+            Add Education
+          </button>
+        )}
       </div>
       <ul className="space-y-4">
         {education.length === 0 ? (
@@ -130,7 +133,7 @@ export default function EducationSection({ education }: EducationSectionProps) {
         )}
       </ul>
 
-      {modalOpen && (
+      {!readOnly && modalOpen && (
         <>
           <div
             className="fixed inset-0 bg-black/50 z-50"

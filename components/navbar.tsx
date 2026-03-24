@@ -7,6 +7,7 @@ import { deleteSession } from '@/lib/session';
 import { clearSessionCookie } from '@/lib/cookies';
 import { db } from '@/lib/db';
 import UserProfileDropdown from './user-profile-dropdown';
+import EmployerDropdown from './employer-dropdown';
 
 /**
  * Navigation Bar Component
@@ -74,7 +75,7 @@ export default async function Navbar() {
         <div className="flex h-16 items-center justify-between">
           {/* Left side: Logo */}
           <Link
-            href="/"
+            href={user?.role === Role.EMPLOYER ? '/employer' : '/'}
             className="text-xl font-bold text-foreground hover:opacity-80 transition-opacity"
           >
             JobPortal
@@ -87,12 +88,6 @@ export default async function Navbar() {
                 {/* Role-based navigation links */}
                 {user.role === Role.USER && (
                   <>
-                    <Link
-                      href="/dashboard"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      Dashboard
-                    </Link>
                     <Link
                       href="/jobs"
                       className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
@@ -110,22 +105,10 @@ export default async function Navbar() {
                 {user.role === Role.EMPLOYER && (
                   <>
                     <Link
-                      href="/employer"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      Dashboard
-                    </Link>
-                    <Link
                       href="/employer/jobs/new"
                       className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
                     >
                       Post a Job
-                    </Link>
-                    <Link
-                      href="/employer/settings"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      Settings
                     </Link>
                   </>
                 )}
@@ -161,12 +144,7 @@ export default async function Navbar() {
                 >
                   Companies
                 </Link>
-                <Link
-                  href="/employer/signup"
-                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                >
-                  For Employers
-                </Link>
+                <EmployerDropdown />
                 <Link
                   href="/login"
                   className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"

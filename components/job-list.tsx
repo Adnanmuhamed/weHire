@@ -20,6 +20,7 @@ interface JobSearchResponse {
     salaryMin: number | null;
     salaryMax: number | null;
     companyName: string;
+    companyId: string;
     createdAt: string;
     isSaved?: boolean;
   }>;
@@ -129,6 +130,7 @@ async function JobListInner({ searchParams }: { searchParams: URLSearchParams })
             salaryMin={job.salaryMin}
             salaryMax={job.salaryMax}
             companyName={job.companyName}
+            companyId={job.companyId}
             createdAt={new Date(job.createdAt)}
             isSaved={job.isSaved}
           />

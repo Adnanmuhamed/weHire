@@ -18,6 +18,16 @@ export interface ApplyToJobResult {
 }
 
 /**
+ * Submit a job application (alias for applyToJob with cover note support).
+ */
+export async function submitApplication(data: {
+  jobId: string;
+  coverNote?: string | null;
+}): Promise<ApplyToJobResult> {
+  return applyToJob(data.jobId, data.coverNote ?? undefined);
+}
+
+/**
  * Apply to a job
  * 
  * Requirements:
@@ -28,7 +38,8 @@ export interface ApplyToJobResult {
  * - Creates Application record with status APPLIED
  */
 export async function applyToJob(
-  jobId: string
+  jobId: string,
+  coverNote?: string
 ): Promise<ApplyToJobResult> {
   try {
     // Check authentication
@@ -83,6 +94,7 @@ export async function applyToJob(
         jobId,
         userId: user.id,
         status: ApplicationStatus.APPLIED,
+        coverNote: coverNote?.trim() || null,
       },
     });
 
