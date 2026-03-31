@@ -2,16 +2,23 @@
 
 /**
  * Filters Sidebar Component
- * 
+ *
  * Advanced filters sidebar for the Jobs page.
- * Includes Job Type, Salary Range, and Sort Order filters.
+ * Work Mode, Job Type, Experience, Salary, Industry, Department, Sort, Saved.
  * Updates URL params on change using useRouter and useSearchParams.
  */
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { JobType } from '@prisma/client';
+import { JobType, WorkMode } from '@prisma/client';
 import { useEffect, useState } from 'react';
 import { Filter } from 'lucide-react';
+import { INDUSTRY_LIST, getDepartments } from '@/lib/constants/industries';
+
+const WORK_MODES: { value: WorkMode; label: string }[] = [
+  { value: 'REMOTE', label: 'Remote' },
+  { value: 'HYBRID', label: 'Hybrid' },
+  { value: 'ONSITE', label: 'On-site' },
+];
 
 export default function FiltersSidebar() {
   const router = useRouter();
@@ -21,8 +28,14 @@ export default function FiltersSidebar() {
   const [jobType, setJobType] = useState<JobType | ''>(
     (searchParams.get('jobType') as JobType) || ''
   );
+  const [workMode, setWorkMode] = useState<WorkMode | ''>(
+    (searchParams.get('workMode') as WorkMode) || ''
+  );
   const [minSalary, setMinSalary] = useState(searchParams.get('minSalary') || '');
   const [maxSalary, setMaxSalary] = useState(searchParams.get('maxSalary') || '');
+  const [experience, setExperience] = useState(searchParams.get('experience') || '');
+  const [industry, setIndustry] = useState(searchParams.get('industry') || '');
+  const [department, setDepartment] = useState(searchParams.get('department') || '');
   const [sort, setSort] = useState<'newest' | 'salary_high' | 'salary_low'>(
     (searchParams.get('sort') as 'newest' | 'salary_high' | 'salary_low') || 'newest'
   );
@@ -33,18 +46,25 @@ export default function FiltersSidebar() {
   // Sync with URL params when they change externally
   useEffect(() => {
     setJobType((searchParams.get('jobType') as JobType) || '');
+    setWorkMode((searchParams.get('workMode') as WorkMode) || '');
     setMinSalary(searchParams.get('minSalary') || '');
     setMaxSalary(searchParams.get('maxSalary') || '');
+    setExperience(searchParams.get('experience') || '');
+    setIndustry(searchParams.get('industry') || '');
+    setDepartment(searchParams.get('department') || '');
     setSort(
       (searchParams.get('sort') as 'newest' | 'salary_high' | 'salary_low') || 'newest'
     );
     setShowSavedOnly(searchParams.get('saved') === 'true');
   }, [searchParams]);
 
+  // Derive departments from selected industry
+  const departmentOptions = industry ? getDepartments(industry) : [];
+
   // Update URL params when filters change
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     if (value) {
       params.set(key, value);
     } else {
@@ -63,6 +83,12 @@ export default function FiltersSidebar() {
     updateParams('jobType', value);
   };
 
+  const handleWorkModeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setWorkMode(value as WorkMode | '');
+    updateParams('workMode', value);
+  };
+
   const handleMinSalaryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setMinSalary(value);
@@ -73,6 +99,33 @@ export default function FiltersSidebar() {
     const value = e.target.value;
     setMaxSalary(value);
     updateParams('maxSalary', value);
+  };
+
+  const handleExperienceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setExperience(value);
+    updateParams('experience', value);
+  };
+
+  const handleIndustryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setIndustry(value);
+    updateParams('industry', value);
+    // Clear department when industry changes
+    if (department) {
+      setDepartment('');
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('industry', value);
+      params.delete('department');
+      params.delete('page');
+      router.push(`/jobs?${params.toString()}`);
+    }
+  };
+
+  const handleDepartmentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setDepartment(value);
+    updateParams('department', value);
   };
 
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -89,33 +142,51 @@ export default function FiltersSidebar() {
 
   const handleClearFilters = () => {
     setJobType('');
+    setWorkMode('');
     setMinSalary('');
     setMaxSalary('');
+    setExperience('');
+    setIndustry('');
+    setDepartment('');
     setSort('newest');
     setShowSavedOnly(false);
     router.push('/jobs');
   };
 
+  const selectClass =
+    'w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent';
+  const inputClass = selectClass;
+
   return (
     <aside className="w-full">
-      <div className="rounded-lg border border-foreground/10 bg-background p-6 space-y-6">
+      <div className="rounded-lg border border-foreground/10 bg-background p-6 space-y-5">
         {/* Header */}
         <div className="flex items-center gap-2">
           <Filter className="w-5 h-5 text-foreground/70" />
           <h2 className="text-lg font-semibold text-foreground">Filters</h2>
         </div>
 
+        {/* Work Mode */}
+        <div>
+          <label htmlFor="workMode" className="block text-sm font-medium mb-1.5 text-foreground">
+            Work Mode
+          </label>
+          <select id="workMode" value={workMode} onChange={handleWorkModeChange} className={selectClass}>
+            <option value="">All Modes</option>
+            {WORK_MODES.map((wm) => (
+              <option key={wm.value} value={wm.value}>
+                {wm.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Job Type */}
         <div>
-          <label htmlFor="jobType" className="block text-sm font-medium mb-2 text-foreground">
+          <label htmlFor="jobType" className="block text-sm font-medium mb-1.5 text-foreground">
             Job Type
           </label>
-          <select
-            id="jobType"
-            value={jobType}
-            onChange={handleJobTypeChange}
-            className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
-          >
+          <select id="jobType" value={jobType} onChange={handleJobTypeChange} className={selectClass}>
             <option value="">All Types</option>
             <option value="FULL_TIME">Full Time</option>
             <option value="PART_TIME">Part Time</option>
@@ -125,9 +196,58 @@ export default function FiltersSidebar() {
           </select>
         </div>
 
+        {/* Experience */}
+        <div>
+          <label htmlFor="experience" className="block text-sm font-medium mb-1.5 text-foreground">
+            Max Experience (Years)
+          </label>
+          <input
+            id="experience"
+            type="number"
+            value={experience}
+            onChange={handleExperienceChange}
+            placeholder="e.g., 5"
+            min="0"
+            max="50"
+            className={inputClass}
+          />
+        </div>
+
+        {/* Industry */}
+        <div>
+          <label htmlFor="industry" className="block text-sm font-medium mb-1.5 text-foreground">
+            Industry
+          </label>
+          <select id="industry" value={industry} onChange={handleIndustryChange} className={selectClass}>
+            <option value="">All Industries</option>
+            {INDUSTRY_LIST.map((ind) => (
+              <option key={ind} value={ind}>
+                {ind}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Department — shown only when an industry is selected & has departments */}
+        {industry && departmentOptions.length > 0 && (
+          <div>
+            <label htmlFor="department" className="block text-sm font-medium mb-1.5 text-foreground">
+              Department
+            </label>
+            <select id="department" value={department} onChange={handleDepartmentChange} className={selectClass}>
+              <option value="">All Departments</option>
+              {departmentOptions.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Salary Range */}
         <div>
-          <label className="block text-sm font-medium mb-2 text-foreground">
+          <label className="block text-sm font-medium mb-1.5 text-foreground">
             Salary Range
           </label>
           <div className="space-y-2">
@@ -137,7 +257,7 @@ export default function FiltersSidebar() {
               onChange={handleMinSalaryChange}
               placeholder="Min Salary"
               min="0"
-              className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
+              className={inputClass}
             />
             <input
               type="number"
@@ -145,22 +265,17 @@ export default function FiltersSidebar() {
               onChange={handleMaxSalaryChange}
               placeholder="Max Salary"
               min="0"
-              className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
+              className={inputClass}
             />
           </div>
         </div>
 
         {/* Sort Order */}
         <div>
-          <label htmlFor="sort" className="block text-sm font-medium mb-2 text-foreground">
+          <label htmlFor="sort" className="block text-sm font-medium mb-1.5 text-foreground">
             Sort By
           </label>
-          <select
-            id="sort"
-            value={sort}
-            onChange={handleSortChange}
-            className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
-          >
+          <select id="sort" value={sort} onChange={handleSortChange} className={selectClass}>
             <option value="newest">Newest First</option>
             <option value="salary_high">Salary: High to Low</option>
             <option value="salary_low">Salary: Low to High</option>
@@ -171,9 +286,9 @@ export default function FiltersSidebar() {
         <button
           type="button"
           onClick={handleClearFilters}
-          className="w-full px-4 py-2 border border-foreground/20 rounded-md font-medium text-foreground hover:bg-foreground/5 focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-colors"
+          className="w-full px-4 py-2 border border-foreground/20 rounded-md font-medium text-foreground hover:bg-foreground/5 focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-colors text-sm"
         >
-          Clear Filters
+          Clear All Filters
         </button>
       </div>
 
@@ -213,4 +328,3 @@ export default function FiltersSidebar() {
     </aside>
   );
 }
-

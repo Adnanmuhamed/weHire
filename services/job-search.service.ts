@@ -13,9 +13,12 @@ export interface JobSearchFilters {
   query?: string; // Text search on title and description
   location?: string;
   jobType?: JobType;
+  workMode?: string;
   minSalary?: number;
   maxSalary?: number;
-  experience?: number; // Max experience filter (jobs where experience <= this value)
+  maxExperience?: number; // Max experience filter (jobs where minExperience <= this value)
+  industryType?: string;
+  department?: string;
 }
 
 export type JobSortOption = 'newest' | 'salary_high' | 'salary_low';
@@ -39,7 +42,10 @@ export interface JobSearchResult {
   companyName: string;
   companyId: string;
   createdAt: Date;
-  isSaved?: boolean; // Whether the job is saved by the current user
+  isSaved?: boolean;
+  workMode?: string;
+  department?: string | null;
+  industryType?: string | null;
 }
 
 export interface JobSearchResponse {
@@ -144,23 +150,41 @@ function buildWhereClause(
     }
   }
 
-  // Experience filtering
-  // Jobs where experience <= maxExperience (or null, meaning no requirement)
-  if (filters?.experience !== undefined) {
+  // Experience filtering: jobs where minExperience <= user's max experience threshold
+  if (filters?.maxExperience !== undefined) {
     const existingAnd = where.AND
-      ? Array.isArray(where.AND)
-        ? where.AND
-        : [where.AND]
+      ? Array.isArray(where.AND) ? where.AND : [where.AND]
       : [];
     where.AND = [
       ...existingAnd,
       {
         OR: [
-          { experience: { lte: filters.experience } },
-          { experience: null },
+          { minExperience: { lte: filters.maxExperience } },
+          { minExperience: null },
         ],
       },
     ];
+  }
+
+  // Work mode filter
+  if (filters?.workMode) {
+    where.workMode = filters.workMode as any;
+  }
+
+  // Industry filter
+  if (filters?.industryType && filters.industryType.trim().length > 0) {
+    where.industryType = {
+      equals: filters.industryType.trim(),
+      mode: 'insensitive',
+    };
+  }
+
+  // Department filter
+  if (filters?.department && filters.department.trim().length > 0) {
+    where.department = {
+      equals: filters.department.trim(),
+      mode: 'insensitive',
+    };
   }
 
   return where;
@@ -233,9 +257,12 @@ export async function searchJobs(
         title: true,
         location: true,
         jobType: true,
+        workMode: true,
         salaryMin: true,
         salaryMax: true,
         createdAt: true,
+        department: true,
+        industryType: true,
         company: {
           select: {
             id: true,
@@ -263,6 +290,9 @@ export async function searchJobs(
     companyId: job.company.id,
     createdAt: job.createdAt,
     isSaved: params?.userId ? savedJobIds.includes(job.id) : undefined,
+    workMode: (job as any).workMode ?? undefined,
+    department: (job as any).department ?? null,
+    industryType: (job as any).industryType ?? null,
   }));
 
   // Calculate pagination metadata

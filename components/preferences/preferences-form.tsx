@@ -10,6 +10,8 @@ interface PreferencesFormProps {
   initialSalaryMin?: number | null;
   initialSalaryMax?: number | null;
   initialWorkModes?: WorkMode[];
+  initialIndustries?: string[];
+  initialDepartments?: string[];
 }
 
 export default function PreferencesForm(props: PreferencesFormProps) {

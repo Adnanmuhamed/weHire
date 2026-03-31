@@ -18,7 +18,8 @@ export interface CreateJobInput {
   status?: JobStatus;
   salaryMin?: number;
   salaryMax?: number;
-  experience?: number;
+  minExperience?: number;
+  maxExperience?: number;
 }
 
 export interface UpdateJobInput {
@@ -29,7 +30,8 @@ export interface UpdateJobInput {
   status?: JobStatus;
   salaryMin?: number;
   salaryMax?: number;
-  experience?: number;
+  minExperience?: number;
+  maxExperience?: number;
 }
 
 export interface JobFilters {
@@ -56,7 +58,8 @@ export interface JobWithCompany {
   status: JobStatus;
   salaryMin: number | null;
   salaryMax: number | null;
-  experience: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
   companyId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -207,7 +210,8 @@ export async function createJob(
       status: data.status || JobStatus.DRAFT,
       salaryMin: data.salaryMin ?? null,
       salaryMax: data.salaryMax ?? null,
-      experience: data.experience ?? null,
+      minExperience: data.minExperience ?? null,
+      maxExperience: data.maxExperience ?? null,
       companyId: company.id,
     },
     include: {
@@ -308,8 +312,8 @@ export async function getPublicJobs(
       ...existingAnd,
       {
         OR: [
-          { experience: { lte: filters.maxExperience } },
-          { experience: null },
+          { minExperience: { lte: filters.maxExperience } },
+          { minExperience: null },
         ],
       },
     ];
@@ -466,8 +470,12 @@ export async function updateJob(
     updateData.salaryMax = data.salaryMax ?? null;
   }
 
-  if (data.experience !== undefined) {
-    updateData.experience = data.experience ?? null;
+  if (data.minExperience !== undefined) {
+    updateData.minExperience = data.minExperience ?? null;
+  }
+
+  if (data.maxExperience !== undefined) {
+    updateData.maxExperience = data.maxExperience ?? null;
   }
 
   // Update job

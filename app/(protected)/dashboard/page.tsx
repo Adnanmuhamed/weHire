@@ -13,9 +13,10 @@ import {
 } from '@/app/actions/job-interaction';
 import { getUserApplications } from '@/services/application.service';
 import { getCandidateReviews } from '@/app/actions/candidate-profile';
+import { getTopCompanies } from '@/app/actions/company';
 import JobCard from '@/components/job-card';
 import { JobType } from '@prisma/client';
-import { Settings2, Star } from 'lucide-react';
+import { Settings2, Star, Building2, ArrowRight } from 'lucide-react';
 
 /** Active = not rejected (still in progress or hired). */
 function getActiveApplicationCount(
@@ -59,7 +60,7 @@ export default async function CandidateDashboardPage() {
 
   const authUser = requireUser(user);
 
-  const [profile, applications, savedResult, prefsResult, recommendedResult, reviewsResult] =
+  const [profile, applications, savedResult, prefsResult, recommendedResult, reviewsResult, topCompaniesResult] =
     await Promise.all([
       db.profile.findUnique({
         where: { userId: user.id },
@@ -81,6 +82,7 @@ export default async function CandidateDashboardPage() {
       getJobPreferences(),
       getRecommendedJobs(),
       getCandidateReviews(),
+      getTopCompanies(6),
     ]);
 
   const activeApplicationsCount = getActiveApplicationCount(applications);
@@ -89,11 +91,13 @@ export default async function CandidateDashboardPage() {
   const reviews = reviewsResult.reviews ?? [];
   const averageRating = reviewsResult.averageRating ?? 0;
   const recentReviews = reviews.slice(0, 2);
+  const topCompanies = topCompaniesResult.companies ?? [];
   const hasPreferences =
     preferences &&
     (preferences.locations.length > 0 ||
       preferences.titles.length > 0 ||
-      preferences.workModes.length > 0);
+      preferences.workModes.length > 0 ||
+      (preferences.industries?.length ?? 0) > 0);
   const recommendedJobs = recommendedResult.jobs ?? [];
   const showLatestFallback = hasPreferences && recommendedJobs.length === 0;
   const latestResult = showLatestFallback ? await getLatestJobs(15) : null;
@@ -116,6 +120,13 @@ export default async function CandidateDashboardPage() {
     : hasPreferences
       ? 'Jobs Recommended for You'
       : 'Latest Jobs';
+
+  const RECOMMENDED_LIMIT = 5;
+  const OTHER_LIMIT = 4;
+  const displayJobsCapped = displayJobs.slice(0, RECOMMENDED_LIMIT);
+  const showViewAllRecommended = displayJobs.length > 0;
+  const otherJobsCapped = otherJobs.slice(0, OTHER_LIMIT);
+  const showViewAllOther = otherJobs.length > 0;
 
   const { percent: profileStrengthPercent, missing: profileMissing } =
     getProfileStrength(profile);
@@ -340,13 +351,13 @@ export default async function CandidateDashboardPage() {
                   </Link>
                 )}
               </div>
-              {displayJobs.length === 0 ? (
+              {displayJobsCapped.length === 0 ? (
                 <p className="text-sm text-foreground/60 py-4">
                   No jobs to show. Try setting preferences or search above.
                 </p>
               ) : (
                 <ul className="space-y-4">
-                  {displayJobs.map((job) => (
+                  {displayJobsCapped.map((job) => (
                     <li key={job.id}>
                       <JobCard
                         jobId={job.id}
@@ -364,9 +375,18 @@ export default async function CandidateDashboardPage() {
                   ))}
                 </ul>
               )}
+              {showViewAllRecommended && (
+                <Link
+                  href="/jobs"
+                  className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
+                >
+                  View All Jobs
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
             </section>
 
-            {hasPreferences && !showLatestFallback && otherJobs.length > 0 && (
+            {hasPreferences && !showLatestFallback && otherJobsCapped.length > 0 && (
               <section>
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h3 className="text-lg font-semibold text-foreground">
@@ -374,7 +394,7 @@ export default async function CandidateDashboardPage() {
                   </h3>
                 </div>
                 <ul className="space-y-4">
-                  {otherJobs.map((job) => (
+                  {otherJobsCapped.map((job) => (
                     <li key={job.id}>
                       <JobCard
                         jobId={job.id}
@@ -391,6 +411,65 @@ export default async function CandidateDashboardPage() {
                     </li>
                   ))}
                 </ul>
+                {showViewAllOther && (
+                  <Link
+                    href="/jobs"
+                    className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
+                  >
+                    View All Jobs
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                )}
+              </section>
+            )}
+
+            {/* Top Companies */}
+            {topCompanies.length > 0 && (
+              <section>
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                    <Building2 className="w-5 h-5" />
+                    Top Companies
+                  </h3>
+                  <Link
+                    href="/companies"
+                    className="flex items-center gap-1 text-sm font-medium text-foreground/70 hover:text-foreground transition-colors"
+                  >
+                    View All
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {topCompanies.map((company) => (
+                    <Link
+                      key={company.id}
+                      href={`/company/${company.id}`}
+                      className="flex flex-col items-center gap-2 p-4 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-sm transition-all text-center"
+                    >
+                      {company.logoUrl ? (
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-foreground/5">
+                          <Image
+                            src={company.logoUrl}
+                            alt=""
+                            fill
+                            className="object-contain"
+                            sizes="48px"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-foreground/10 flex items-center justify-center text-lg font-bold text-foreground/60">
+                          {company.name.charAt(0)}
+                        </div>
+                      )}
+                      <h4 className="text-sm font-medium text-foreground line-clamp-1">
+                        {company.name}
+                      </h4>
+                      <p className="text-xs text-foreground/60">
+                        {company.openJobCount} open {company.openJobCount === 1 ? 'job' : 'jobs'}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
               </section>
             )}
           </div>

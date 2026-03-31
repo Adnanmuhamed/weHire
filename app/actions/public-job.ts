@@ -13,13 +13,15 @@ import { JobType, JobStatus, WorkMode } from '@prisma/client';
 export interface PublicJobFilters {
   search?: string;
   location?: string;
-  experience?: number;
+  maxExperience?: number;
   workMode?: WorkMode | WorkMode[];
   jobType?: JobType | JobType[];
   degree?: string;
   salaryMin?: number;
   salaryMax?: number | null;
   companyId?: string;
+  industryType?: string;
+  department?: string;
 }
 
 export interface PublicJob {
@@ -32,7 +34,8 @@ export interface PublicJob {
   degree: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
-  experience: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
   createdAt: Date;
   company: {
     id: string;
@@ -62,13 +65,15 @@ export async function getPublicJobs(
     const {
       search,
       location,
-      experience: expYears,
+      maxExperience: expYears,
       workMode,
       jobType,
       degree,
       salaryMin: userSalaryMin,
       salaryMax: userSalaryMax,
       companyId,
+      industryType,
+      department,
     } = filters;
 
     // Search: title or description (case-insensitive)
@@ -88,14 +93,14 @@ export async function getPublicJobs(
       };
     }
 
-    // Experience: jobs where required experience <= user input, or not specified (null)
+    // Experience: jobs where minExperience <= user's max preference
     if (expYears !== undefined && expYears !== null && !Number.isNaN(expYears)) {
       const maxYears = Math.floor(Number(expYears));
       where.AND = where.AND || [];
       (where.AND as unknown[]).push({
         OR: [
-          { experience: { lte: maxYears } },
-          { experience: null },
+          { minExperience: { lte: maxYears } },
+          { minExperience: null },
         ],
       });
     }
@@ -149,6 +154,22 @@ export async function getPublicJobs(
       });
     }
 
+    // Industry filter
+    if (industryType && industryType.trim().length > 0) {
+      where.industryType = {
+        equals: industryType.trim(),
+        mode: 'insensitive',
+      };
+    }
+
+    // Department filter
+    if (department && department.trim().length > 0) {
+      where.department = {
+        equals: department.trim(),
+        mode: 'insensitive',
+      };
+    }
+
     const jobs = await db.job.findMany({
       where,
       select: {
@@ -161,7 +182,8 @@ export async function getPublicJobs(
         degree: true,
         salaryMin: true,
         salaryMax: true,
-        experience: true,
+        minExperience: true,
+        maxExperience: true,
         createdAt: true,
         company: {
           select: {
@@ -196,7 +218,8 @@ export interface JobDetail {
   degree: string | null;
   salaryMin: number | null;
   salaryMax: number | null;
-  experience: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
   createdAt: Date;
   company: {
     id: string;
@@ -235,7 +258,8 @@ export async function getJobById(
         degree: true,
         salaryMin: true,
         salaryMax: true,
-        experience: true,
+        minExperience: true,
+        maxExperience: true,
         createdAt: true,
         status: true,
         company: {

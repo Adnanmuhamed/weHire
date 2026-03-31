@@ -38,6 +38,8 @@ export default async function PreferencesPage() {
               initialSalaryMin={preferences?.expectedSalaryMin ?? null}
               initialSalaryMax={preferences?.expectedSalaryMax ?? null}
               initialWorkModes={preferences?.workModes ?? []}
+              initialIndustries={preferences?.industries ?? []}
+              initialDepartments={preferences?.departments ?? []}
             />
           </div>
           <p className="mt-4 text-center">

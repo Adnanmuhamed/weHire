@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { Building2, Users, TrendingUp, ArrowRight } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { Role } from '@prisma/client';
+import HomeSearchBar from '@/components/home-search-bar';
 
 /**
  * Landing Page
@@ -50,46 +51,13 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* Find Your Next Role */}
+      {/* Find Your Next Role — with location autocomplete */}
       <section className="py-16 border-b border-foreground/10">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
             Find Your Next Role
           </h2>
-          <form
-            action="/jobs"
-            method="get"
-            className="flex flex-col sm:flex-row gap-3"
-          >
-            <input
-              type="search"
-              name="query"
-              placeholder="Job Title or Keyword"
-              className="flex-1 px-4 py-3 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              aria-label="Job title or keyword"
-            />
-            <input
-              type="number"
-              name="exp"
-              min="0"
-              placeholder="Experience (Years)"
-              className="w-full sm:w-40 px-4 py-3 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              aria-label="Experience in years"
-            />
-            <input
-              type="text"
-              name="loc"
-              placeholder="Location"
-              className="w-full sm:w-48 px-4 py-3 border border-foreground/20 rounded-lg bg-background text-foreground placeholder:text-foreground/50 focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              aria-label="Location"
-            />
-            <button
-              type="submit"
-              className="px-6 py-3 bg-foreground text-background rounded-lg font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
-            >
-              Search
-            </button>
-          </form>
+          <HomeSearchBar />
         </div>
       </section>
 

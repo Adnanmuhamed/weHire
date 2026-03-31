@@ -7,12 +7,13 @@ import { JobType, WorkMode } from '@prisma/client';
 import Link from 'next/link';
 import { Building2, MapPin, DollarSign, Calendar } from 'lucide-react';
 import FilterSidebar from '@/components/jobs/filter-sidebar';
+import JobsSearchBar from '@/components/jobs/search-bar';
 
 /**
  * Public Job Board Page
  *
  * Main search page with top bar (query, exp, loc) and sidebar filters.
- * URL params: query, exp, loc, workMode, salary, jobType, degree, companyId.
+ * URL params: query, exp, loc, workMode, salary, jobType, degree, companyId, industry, department.
  */
 
 interface JobsPageProps {
@@ -77,6 +78,8 @@ function buildFilters(
   );
   const degree = get('degree')?.trim();
   const companyId = get('companyId')?.trim();
+  const industry = get('industry')?.trim();
+  const department = get('department')?.trim();
   const salaryPreset = get('salary');
 
   let salaryMin: number | undefined;
@@ -96,11 +99,13 @@ function buildFilters(
   if (query) filters.search = query;
   if (location) filters.location = location;
   if (experience !== undefined && !Number.isNaN(experience))
-    filters.experience = experience;
+    filters.maxExperience = experience;
   if (workMode.length) filters.workMode = workMode;
   if (jobType.length) filters.jobType = jobType;
   if (degree) filters.degree = degree;
   if (companyId) filters.companyId = companyId;
+  if (industry) filters.industryType = industry;
+  if (department) filters.department = department;
   if (salaryMin !== undefined) filters.salaryMin = salaryMin;
   if (salaryMax !== undefined) filters.salaryMax = salaryMax;
 
@@ -212,40 +217,8 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
   const resolvedParams = await searchParams;
   const filters = buildFilters(resolvedParams);
 
-  const query =
-    typeof resolvedParams.query === 'string'
-      ? resolvedParams.query
-      : typeof resolvedParams.search === 'string'
-        ? resolvedParams.search
-        : '';
-  const exp =
-    typeof resolvedParams.exp === 'string' ? resolvedParams.exp : '';
-  const loc =
-    typeof resolvedParams.loc === 'string'
-      ? resolvedParams.loc
-      : typeof resolvedParams.location === 'string'
-        ? resolvedParams.location
-        : '';
-
   const [companiesResult] = await Promise.all([getAllCompanies()]);
   const companies = companiesResult.companies ?? [];
-
-  // Collect hidden params to preserve when submitting the top search form
-  const hiddenParams: { name: string; value: string }[] = [];
-  const workModeArr = resolvedParams.workMode;
-  (Array.isArray(workModeArr) ? workModeArr : workModeArr ? [workModeArr] : []).forEach(
-    (v) => hiddenParams.push({ name: 'workMode', value: String(v) })
-  );
-  const jobTypeArr = resolvedParams.jobType;
-  (Array.isArray(jobTypeArr) ? jobTypeArr : jobTypeArr ? [jobTypeArr] : []).forEach(
-    (v) => hiddenParams.push({ name: 'jobType', value: String(v) })
-  );
-  if (resolvedParams.salary && typeof resolvedParams.salary === 'string')
-    hiddenParams.push({ name: 'salary', value: resolvedParams.salary });
-  if (resolvedParams.degree && typeof resolvedParams.degree === 'string')
-    hiddenParams.push({ name: 'degree', value: resolvedParams.degree });
-  if (resolvedParams.companyId && typeof resolvedParams.companyId === 'string')
-    hiddenParams.push({ name: 'companyId', value: resolvedParams.companyId });
 
   return (
     <div className="min-h-screen bg-background">
@@ -259,62 +232,8 @@ export default async function JobsPage({ searchParams }: JobsPageProps) {
           </p>
         </div>
 
-        {/* Top bar: 3 inputs (same as homepage) */}
-        <div className="bg-background border border-foreground/10 rounded-lg p-4 mb-6">
-          <form action="/jobs" method="get" className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {hiddenParams.map((p, i) => (
-              <input key={`${p.name}-${i}`} type="hidden" name={p.name} value={p.value} />
-            ))}
-            <div>
-              <label htmlFor="query" className="block text-sm font-medium mb-2 text-foreground">
-                Job Title / Keyword
-              </label>
-              <input
-                id="query"
-                name="query"
-                type="text"
-                defaultValue={query}
-                placeholder="Job title, skills..."
-                className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              />
-            </div>
-            <div>
-              <label htmlFor="exp" className="block text-sm font-medium mb-2 text-foreground">
-                Experience (Years)
-              </label>
-              <input
-                id="exp"
-                name="exp"
-                type="number"
-                min="0"
-                defaultValue={exp}
-                placeholder="e.g. 3"
-                className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              />
-            </div>
-            <div>
-              <label htmlFor="loc" className="block text-sm font-medium mb-2 text-foreground">
-                Location
-              </label>
-              <input
-                id="loc"
-                name="loc"
-                type="text"
-                defaultValue={loc}
-                placeholder="City, State..."
-                className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="w-full bg-foreground text-background px-4 py-2 rounded-md font-medium hover:opacity-90 transition-opacity"
-              >
-                Search
-              </button>
-            </div>
-          </form>
-        </div>
+        {/* Top bar — client component with location autocomplete */}
+        <JobsSearchBar />
 
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="w-full lg:w-72 shrink-0">

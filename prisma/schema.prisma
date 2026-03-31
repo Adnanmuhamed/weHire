@@ -219,6 +219,8 @@ model JobPreference {
   expectedSalaryMin Int?
   expectedSalaryMax Int?
   workModes         WorkMode[]
+  industries        String[]
+  departments       String[]
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -276,11 +278,22 @@ model Job {
   jobType     JobType
   status      JobStatus @default(DRAFT)
   workMode    WorkMode  @default(ONSITE)
-  degree      String?
+  degree      String?         // legacy — kept for backward compat
+  degreeRequired String?      // new: specific degree e.g. "B.Tech CSE"
+  qualification  String?      // "12th Pass" | "Diploma" | "Graduate" | "Post Graduate"
+  department  String?
+  industryType String?
+  jobRole     String?         // dependent on industry/department
 
   salaryMin   Int?
   salaryMax   Int?
-  experience  Int?      // years
+
+  // experience range (replaces single `experience` field)
+  minExperience Int?
+  maxExperience Int?
+
+  skillsRequired  String[]    // e.g. ["React","Node.js"]
+  languagesKnown  String[]    // e.g. ["English","Hindi"]
 
   companyId String
   createdAt DateTime @default(now())
@@ -295,6 +308,8 @@ model Job {
   @@index([workMode])
   @@index([location])
   @@index([salaryMin, salaryMax])
+  @@index([industryType])
+  @@index([department])
 }
 
 /* =========================

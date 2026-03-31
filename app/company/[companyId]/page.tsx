@@ -24,7 +24,8 @@ export default async function CompanyPage({ params }: PageProps) {
           workMode: true,
           salaryMin: true,
           salaryMax: true,
-          experience: true,
+          minExperience: true,
+          maxExperience: true,
           createdAt: true,
         },
       },
@@ -108,7 +109,7 @@ export default async function CompanyPage({ params }: PageProps) {
                 foundedYear: company.foundedYear,
                 websiteUrl: company.websiteUrl,
               }}
-              jobs={company.jobs}
+              jobs={company.jobs as any}
             />
           </div>
 

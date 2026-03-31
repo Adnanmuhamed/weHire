@@ -136,10 +136,13 @@ export default async function JobDetailsPage({ params }: PageProps) {
                   <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
                 </div>
 
-                {job.experience !== null && (
+                {(job.minExperience !== null || job.maxExperience !== null) && (
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-foreground/60" />
-                    <span>{job.experience}+ years experience</span>
+                    <span>
+                      {job.minExperience ?? 0}
+                      {job.maxExperience !== null ? `–${job.maxExperience}` : '+'} years experience
+                    </span>
                   </div>
                 )}
 

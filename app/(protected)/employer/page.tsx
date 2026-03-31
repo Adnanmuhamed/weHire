@@ -2,19 +2,19 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { requireEmployer } from '@/lib/rbac';
-import { getEmployerJobs, EmployerJob } from '@/services/employer-dashboard.service';
 import { JobStatus } from '@prisma/client';
 import { ExternalLink, Briefcase } from 'lucide-react';
 import { db } from '@/lib/db';
+import JobStatusToggle from '@/components/employer/job-status-toggle';
 
 /**
  * Employer Dashboard Overview Page
- * 
+ *
  * Server Component that displays employer dashboard overview.
  * Protected route - requires authentication and employer role.
- * 
- * FIX: Calls service directly instead of making HTTP request to avoid cookie forwarding issues.
  */
+
+export const dynamic = 'force-dynamic';
 
 function formatJobDate(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {
@@ -29,7 +29,18 @@ export default async function EmployerDashboardPage() {
   const authenticatedUser = requireEmployer(user);
 
   const [jobs, company] = await Promise.all([
-    getEmployerJobs(authenticatedUser),
+    db.job.findMany({
+      where: { company: { ownerId: authenticatedUser.id } },
+      select: {
+        id: true,
+        title: true,
+        location: true,
+        status: true,
+        createdAt: true,
+        _count: { select: { applications: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
     db.company.findUnique({
       where: { ownerId: authenticatedUser.id },
       select: { id: true },
@@ -126,7 +137,7 @@ export default async function EmployerDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-foreground/10">
-                {jobs.map((job: EmployerJob) => (
+                {jobs.map((job) => (
                   <tr key={job.id} className="hover:bg-muted/40">
                     <td className="px-4 py-3 align-top">
                       <div className="font-medium text-foreground">
@@ -140,23 +151,15 @@ export default async function EmployerDashboardPage() {
                       {formatJobDate(job.createdAt)}
                     </td>
                     <td className="px-4 py-3 align-top">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
-                          job.status === JobStatus.OPEN
-                            ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
-                            : 'bg-foreground/10 text-foreground/70'
-                        }`}
-                      >
-                        {job.status}
-                      </span>
+                      <JobStatusToggle jobId={job.id} currentStatus={job.status} />
                     </td>
                     <td className="px-4 py-3 align-top text-sm">
                       <Link
                         href={`/employer/jobs/${job.id}/applications`}
                         className="font-medium text-primary hover:underline"
                       >
-                        {job.applicationCount}{' '}
-                        {job.applicationCount === 1 ? 'application' : 'applications'}
+                        {job._count.applications}{' '}
+                        {job._count.applications === 1 ? 'application' : 'applications'}
                       </Link>
                     </td>
                     <td className="px-4 py-3 align-top text-right text-sm">
@@ -165,7 +168,7 @@ export default async function EmployerDashboardPage() {
                           href={`/jobs/${job.id}`}
                           className="text-foreground/70 hover:text-foreground underline-offset-2 hover:underline"
                         >
-                          View Details
+                          View
                         </Link>
                         <span className="text-foreground/20">•</span>
                         <Link
@@ -186,4 +189,3 @@ export default async function EmployerDashboardPage() {
     </div>
   );
 }
-

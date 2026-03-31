@@ -62,3 +62,65 @@ export async function updateCompany(
     return { error: 'Failed to update company profile. Please try again.' };
   }
 }
+
+/* ================ Top Companies ================ */
+
+export interface TopCompanyItem {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+  location: string | null;
+  type: string;
+  openJobCount: number;
+}
+
+export interface GetTopCompaniesResult {
+  success?: boolean;
+  error?: string;
+  companies?: TopCompanyItem[];
+}
+
+/**
+ * Fetch top companies by number of open jobs.
+ * Public — no authentication required.
+ */
+export async function getTopCompanies(
+  limit: number = 6
+): Promise<GetTopCompaniesResult> {
+  try {
+    const companies = await db.company.findMany({
+      where: {
+        jobs: {
+          some: { status: 'OPEN' },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        logoUrl: true,
+        location: true,
+        type: true,
+        _count: { select: { jobs: { where: { status: 'OPEN' } } } },
+      },
+      orderBy: {
+        jobs: { _count: 'desc' },
+      },
+      take: limit,
+    });
+
+    return {
+      success: true,
+      companies: companies.map((c) => ({
+        id: c.id,
+        name: c.name,
+        logoUrl: c.logoUrl,
+        location: c.location,
+        type: c.type,
+        openJobCount: c._count.jobs,
+      })),
+    };
+  } catch (e) {
+    console.error('getTopCompanies error:', e);
+    return { error: 'Failed to load top companies' };
+  }
+}

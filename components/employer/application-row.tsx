@@ -7,7 +7,7 @@ import { ExternalLink } from 'lucide-react';
 
 /**
  * Application Row Component
- * 
+ *
  * Displays a single application in a table row.
  * Includes interactive status selector and View Resume link.
  */
@@ -33,11 +33,11 @@ function formatDate(date: string): string {
 function maskEmail(email: string): string {
   const [localPart, domain] = email.split('@');
   if (!domain) return email;
-  
+
   const maskedLocal = localPart.length > 2
     ? `${localPart[0]}${'*'.repeat(localPart.length - 2)}${localPart[localPart.length - 1]}`
     : localPart;
-  
+
   return `${maskedLocal}@${domain}`;
 }
 
@@ -87,4 +87,3 @@ export default function ApplicationRow({
     </tr>
   );
 }
-

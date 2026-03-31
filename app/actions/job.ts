@@ -69,16 +69,21 @@ export async function createJob(
         location: data.location.trim(),
         jobType: data.jobType as JobType,
         workMode: (data.workMode as WorkMode) ?? 'ONSITE',
-        degree: data.degree?.trim() || null,
+        industryType: data.industryType?.trim() || null,
+        department: data.department?.trim() || null,
+        jobRole: data.jobRole?.trim() || null,
+        qualification: data.qualification ?? null,
+        degreeRequired: data.degreeRequired?.trim() || null,
+        skillsRequired: data.skillsRequired ?? [],
+        languagesKnown: data.languagesKnown ?? [],
         status: JobStatus.OPEN,
         salaryMin: data.salaryMin ?? null,
         salaryMax: data.salaryMax ?? null,
-        experience: data.experience ?? null,
+        minExperience: data.minExperience ?? null,
+        maxExperience: data.maxExperience ?? null,
         companyId: company.id,
       },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     });
 
     // Revalidate the employer jobs page
@@ -191,5 +196,194 @@ export async function getEmployerJobs(): Promise<GetEmployerJobsResult> {
       error:
         'Something went wrong while fetching jobs. Please try again.',
     };
+  }
+}
+
+/* ===== Job Edit Actions ===== */
+
+export interface JobForEdit {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  jobType: JobType;
+  workMode: WorkMode;
+  industryType: string | null;
+  department: string | null;
+  jobRole: string | null;
+  qualification: string | null;
+  degreeRequired: string | null;
+  skillsRequired: string[];
+  languagesKnown: string[];
+  salaryMin: number | null;
+  salaryMax: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
+  status: JobStatus;
+}
+
+export interface GetJobForEditResult {
+  success?: boolean;
+  error?: string;
+  job?: JobForEdit;
+}
+
+export async function getJobForEdit(jobId: string): Promise<GetJobForEditResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    const authenticatedUser = requireEmployer(user);
+
+    const company = await db.company.findUnique({
+      where: { ownerId: authenticatedUser.id },
+      select: { id: true },
+    });
+    if (!company) return { error: 'Company not found.' };
+
+    const job = await db.job.findUnique({
+      where: { id: jobId },
+      select: {
+        id: true, title: true, description: true, location: true,
+        jobType: true, workMode: true, salaryMin: true, salaryMax: true,
+        minExperience: true, maxExperience: true,
+        industryType: true, department: true,
+        jobRole: true, qualification: true, degreeRequired: true,
+        skillsRequired: true, languagesKnown: true,
+        status: true, companyId: true,
+      },
+    });
+
+    if (!job || job.companyId !== company.id) {
+      return { error: 'Job not found or access denied.' };
+    }
+
+    return { success: true, job };
+  } catch (error: any) {
+    if (error.name === 'AuthorizationError') return { error: 'Permission denied.' };
+    console.error('getJobForEdit error:', error);
+    return { error: 'Failed to load job.' };
+  }
+}
+
+export interface UpdateJobInput {
+  title: string;
+  description: string;
+  location: string;
+  jobType: string;
+  workMode: string;
+  industryType?: string;
+  department?: string;
+  jobRole?: string;
+  qualification?: string;
+  degreeRequired?: string;
+  skillsRequired?: string[];
+  languagesKnown?: string[];
+  salaryMin?: number;
+  salaryMax?: number;
+  minExperience?: number;
+  maxExperience?: number;
+  status?: string;
+}
+
+export interface UpdateJobResult {
+  success?: boolean;
+  error?: string;
+}
+
+export async function updateJob(jobId: string, input: UpdateJobInput): Promise<UpdateJobResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    const authenticatedUser = requireEmployer(user);
+
+    const company = await db.company.findUnique({
+      where: { ownerId: authenticatedUser.id },
+      select: { id: true },
+    });
+    if (!company) return { error: 'Company not found.' };
+
+    const job = await db.job.findUnique({
+      where: { id: jobId },
+      select: { companyId: true },
+    });
+    if (!job || job.companyId !== company.id) {
+      return { error: 'Job not found or access denied.' };
+    }
+
+    await db.job.update({
+      where: { id: jobId },
+      data: {
+        title: input.title.trim(),
+        description: input.description.trim(),
+        location: input.location.trim(),
+        jobType: input.jobType as JobType,
+        workMode: input.workMode as WorkMode,
+        industryType: input.industryType?.trim() || null,
+        department: input.department?.trim() || null,
+        jobRole: input.jobRole?.trim() || null,
+        qualification: input.qualification?.trim() || null,
+        degreeRequired: input.degreeRequired?.trim() || null,
+        skillsRequired: input.skillsRequired ?? [],
+        languagesKnown: input.languagesKnown ?? [],
+        salaryMin: input.salaryMin ?? null,
+        salaryMax: input.salaryMax ?? null,
+        minExperience: input.minExperience ?? null,
+        maxExperience: input.maxExperience ?? null,
+        ...(input.status ? { status: input.status as JobStatus } : {}),
+      },
+    });
+
+    revalidatePath('/employer');
+    revalidatePath('/employer/jobs');
+    revalidatePath(`/jobs/${jobId}`);
+    return { success: true };
+  } catch (error: any) {
+    if (error.name === 'AuthorizationError') return { error: 'Permission denied.' };
+    console.error('updateJob error:', error);
+    return { error: 'Failed to update job.' };
+  }
+}
+
+export interface UpdateJobStatusResult {
+  success?: boolean;
+  error?: string;
+}
+
+export async function updateJobStatus(
+  jobId: string,
+  status: JobStatus
+): Promise<UpdateJobStatusResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    const authenticatedUser = requireEmployer(user);
+
+    const company = await db.company.findUnique({
+      where: { ownerId: authenticatedUser.id },
+      select: { id: true },
+    });
+    if (!company) return { error: 'Company not found.' };
+
+    const job = await db.job.findUnique({
+      where: { id: jobId },
+      select: { companyId: true },
+    });
+    if (!job || job.companyId !== company.id) {
+      return { error: 'Job not found or access denied.' };
+    }
+
+    await db.job.update({
+      where: { id: jobId },
+      data: { status },
+    });
+
+    revalidatePath('/employer');
+    revalidatePath('/employer/jobs');
+    revalidatePath(`/jobs/${jobId}`);
+    return { success: true };
+  } catch (error: any) {
+    if (error.name === 'AuthorizationError') return { error: 'Permission denied.' };
+    console.error('updateJobStatus error:', error);
+    return { error: 'Failed to update job status.' };
   }
 }

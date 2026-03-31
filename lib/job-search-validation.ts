@@ -1,4 +1,4 @@
-import { JobType } from '@prisma/client';
+import { JobType, WorkMode } from '@prisma/client';
 import { JobSortOption } from '@/services/job-search.service';
 
 /**
@@ -12,9 +12,12 @@ export interface ValidatedSearchParams {
   query?: string;
   location?: string;
   jobType?: JobType;
+  workMode?: string;
   minSalary?: number;
   maxSalary?: number;
   experience?: number;
+  industryType?: string;
+  department?: string;
   sort?: JobSortOption;
   page: number;
   limit: number;
@@ -154,6 +157,42 @@ export function validateJobSearchParams(
       };
     }
     params.sort = sortParam as JobSortOption;
+  }
+
+  // Validate workMode
+  const workModeParam = searchParams.get('workMode');
+  if (workModeParam !== null) {
+    if (!Object.values(WorkMode).includes(workModeParam as WorkMode)) {
+      return {
+        valid: false,
+        error: `Invalid workMode. Must be one of: ${Object.values(WorkMode).join(', ')}`,
+      };
+    }
+    params.workMode = workModeParam;
+  }
+
+  // Validate industryType
+  const industryParam = searchParams.get('industry');
+  if (industryParam !== null) {
+    const trimmed = industryParam.trim();
+    if (trimmed.length > 0) {
+      if (trimmed.length > 200) {
+        return { valid: false, error: 'Industry must not exceed 200 characters' };
+      }
+      params.industryType = trimmed;
+    }
+  }
+
+  // Validate department
+  const departmentParam = searchParams.get('department');
+  if (departmentParam !== null) {
+    const trimmed = departmentParam.trim();
+    if (trimmed.length > 0) {
+      if (trimmed.length > 200) {
+        return { valid: false, error: 'Department must not exceed 200 characters' };
+      }
+      params.department = trimmed;
+    }
   }
 
   // Validate pagination

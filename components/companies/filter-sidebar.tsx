@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { Filter } from 'lucide-react';
 import { CompanyType } from '@prisma/client';
+import LocationAutocomplete from '@/components/ui/location-autocomplete';
 
 const COMPANY_TYPES: { value: CompanyType; label: string }[] = [
   { value: 'CORPORATE', label: 'Corporate' },
@@ -132,6 +133,18 @@ export default function CompaniesFilterSidebar({
           <p className="block text-sm font-medium text-foreground mb-2">
             Location
           </p>
+          {/* Location autocomplete search */}
+          <LocationAutocomplete
+            value=""
+            onChange={(loc) => {
+              if (loc && !locations.includes(loc)) {
+                toggleLocation(loc);
+              }
+            }}
+            placeholder="Search a city…"
+            allowCustom
+            className="mb-3"
+          />
           {availableLocations.length === 0 ? (
             <p className="text-xs text-foreground/50">No locations yet.</p>
           ) : (

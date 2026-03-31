@@ -105,8 +105,14 @@ export default async function Navbar() {
                 {user.role === Role.EMPLOYER && (
                   <>
                     <Link
-                      href="/employer/jobs/new"
+                      href="/employer"
                       className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                    >
+                      Manage Jobs
+                    </Link>
+                    <Link
+                      href="/employer/jobs/new"
+                      className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity"
                     >
                       Post a Job
                     </Link>

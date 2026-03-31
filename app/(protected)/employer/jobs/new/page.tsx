@@ -2,20 +2,23 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
 import { createJob } from '@/app/actions/job';
 import { CreateJobSchema, CreateJobInput } from '@/lib/validators/job';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-
-/**
- * Post a New Job Page
- * 
- * Client Component with a professional form for creating job postings.
- * Uses react-hook-form with Zod validation for robust form handling.
- */
+import LocationAutocomplete from '@/components/ui/location-autocomplete';
+import TagInput from '@/components/ui/tag-input';
+import MultiSelect from '@/components/ui/multi-select';
+import { INDUSTRY_LIST, getDepartments } from '@/lib/constants/industries';
+import {
+  QUALIFICATION_OPTIONS,
+  COMMON_SKILLS,
+  LANGUAGE_OPTIONS,
+  getJobRoles,
+} from '@/lib/constants/job-fields';
 
 export default function PostJobPage() {
   const router = useRouter();
@@ -25,39 +28,53 @@ export default function PostJobPage() {
   const {
     register,
     handleSubmit,
+    control,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<CreateJobInput>({
     resolver: zodResolver(CreateJobSchema),
     defaultValues: {
       workMode: 'ONSITE',
-      degree: '',
+      degreeRequired: '',
       salaryMin: undefined,
       salaryMax: undefined,
-      experience: undefined,
+      minExperience: undefined,
+      maxExperience: undefined,
+      industryType: '',
+      department: '',
+      jobRole: '',
+      qualification: undefined,
+      skillsRequired: [],
+      languagesKnown: [],
     },
   });
+
+  const selectedIndustry = watch('industryType') || '';
+  const selectedJobRole = watch('jobRole') || '';
+  const departmentOptions = selectedIndustry ? getDepartments(selectedIndustry) : [];
+  const jobRoleOptions = selectedIndustry ? getJobRoles(selectedIndustry) : [];
 
   const onSubmit = async (data: CreateJobInput) => {
     setSubmitError(null);
     setIsSubmitting(true);
-
     try {
       const result = await createJob(data);
-
-      if (result.error) {
-        setSubmitError(result.error);
-        setIsSubmitting(false);
-        return;
-      }
-
+      if (result.error) { setSubmitError(result.error); setIsSubmitting(false); return; }
       toast.success('Job posted! Redirecting...');
-      router.push('/employer/jobs');
-    } catch (err) {
-      console.error('Failed to post job:', err);
+      router.push('/employer');
+    } catch {
       setSubmitError('Something went wrong. Please try again.');
       setIsSubmitting(false);
     }
   };
+
+  const inputCls = (hasError?: boolean) =>
+    `w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2
+     focus:ring-foreground/20 focus:border-transparent text-sm
+     ${hasError ? 'border-red-500 dark:border-red-500' : 'border-foreground/20'}`;
+  const labelCls = 'block text-sm font-medium text-foreground mb-2';
+  const errCls = 'mt-1 text-sm text-red-600 dark:text-red-400';
 
   return (
     <div className="min-h-screen bg-background">
@@ -65,109 +82,49 @@ export default function PostJobPage() {
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
-            <Link
-              href="/employer/jobs"
-              className="text-foreground/70 hover:text-foreground transition-colors"
-            >
+            <Link href="/employer" className="text-foreground/70 hover:text-foreground transition-colors">
               ← Back to Jobs
             </Link>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-            Post a New Job
-          </h1>
-          <p className="text-foreground/70">
-            Fill in the details below to create a new job posting
-          </p>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">Post a New Job</h1>
+          <p className="text-foreground/70">Fill in the details below to create a new job posting</p>
         </div>
 
-        {/* Form Card */}
         <div className="border border-foreground/10 rounded-lg bg-background p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            {/* Error Message */}
+
+            {/* Global error */}
             {submitError && (
-              <div
-                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-md text-sm"
-                role="alert"
-              >
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800
+                text-red-800 dark:text-red-200 px-4 py-3 rounded-md text-sm" role="alert">
                 {submitError}
               </div>
             )}
 
-            {/* Job Title */}
+            {/* ── Job Title ── */}
             <div>
-              <label
-                htmlFor="title"
-                className="block text-sm font-medium text-foreground mb-2"
-              >
-                Job Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="title"
-                type="text"
-                {...register('title')}
-                className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                  errors.title
-                    ? 'border-red-500 dark:border-red-500'
-                    : 'border-foreground/20'
-                }`}
-                placeholder="e.g., Senior Software Engineer"
-                disabled={isSubmitting}
-              />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.title.message}
-                </p>
-              )}
+              <label htmlFor="title" className={labelCls}>Job Title <span className="text-red-500">*</span></label>
+              <input id="title" type="text" {...register('title')}
+                className={inputCls(!!errors.title)} placeholder="e.g., Senior Software Engineer"
+                disabled={isSubmitting} />
+              {errors.title && <p className={errCls}>{errors.title.message}</p>}
             </div>
 
-            {/* Description */}
+            {/* ── Description ── */}
             <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-foreground mb-2"
-              >
-                Job Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                id="description"
-                {...register('description')}
-                rows={8}
-                minLength={10}
-                className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm resize-y min-h-[200px] ${
-                  errors.description
-                    ? 'border-red-500 dark:border-red-500'
-                    : 'border-foreground/20'
-                }`}
-                placeholder="Describe the role, responsibilities, requirements, and what makes this opportunity great..."
-                disabled={isSubmitting}
-              />
-              {errors.description && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.description.message}
-                </p>
-              )}
+              <label htmlFor="description" className={labelCls}>Job Description <span className="text-red-500">*</span></label>
+              <textarea id="description" {...register('description')} rows={8}
+                className={`${inputCls(!!errors.description)} resize-y min-h-[200px]`}
+                placeholder="Describe the role, responsibilities, requirements…"
+                disabled={isSubmitting} />
+              {errors.description && <p className={errCls}>{errors.description.message}</p>}
             </div>
 
-            {/* Job Type, Work Mode, Location Grid */}
+            {/* ── Job Type + Work Mode ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Job Type */}
               <div>
-                <label
-                  htmlFor="jobType"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Job Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="jobType"
-                  {...register('jobType')}
-                  className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.jobType
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  disabled={isSubmitting}
-                >
+                <label htmlFor="jobType" className={labelCls}>Job Type <span className="text-red-500">*</span></label>
+                <select id="jobType" {...register('jobType')} className={inputCls(!!errors.jobType)} disabled={isSubmitting}>
                   <option value="">Select job type</option>
                   <option value="FULL_TIME">Full Time</option>
                   <option value="PART_TIME">Part Time</option>
@@ -175,227 +132,176 @@ export default function PostJobPage() {
                   <option value="INTERN">Intern</option>
                   <option value="REMOTE">Remote</option>
                 </select>
-                {errors.jobType && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.jobType.message}
-                  </p>
-                )}
+                {errors.jobType && <p className={errCls}>{errors.jobType.message}</p>}
               </div>
-
-              {/* Work Mode */}
               <div>
-                <label
-                  htmlFor="workMode"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Work Mode <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="workMode"
-                  {...register('workMode')}
-                  className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.workMode
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  disabled={isSubmitting}
-                >
-                  <option value="REMOTE">Remote</option>
-                  <option value="HYBRID">Hybrid</option>
+                <label htmlFor="workMode" className={labelCls}>Work Mode <span className="text-red-500">*</span></label>
+                <select id="workMode" {...register('workMode')} className={inputCls(!!errors.workMode)} disabled={isSubmitting}>
                   <option value="ONSITE">On-site</option>
+                  <option value="HYBRID">Hybrid</option>
+                  <option value="REMOTE">Remote</option>
                 </select>
-                {errors.workMode && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.workMode.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Location */}
-              <div className="md:col-span-2">
-                <label
-                  htmlFor="location"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="location"
-                  type="text"
-                  {...register('location')}
-                  className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.location
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  placeholder="e.g., San Francisco, CA"
-                  disabled={isSubmitting}
-                />
-                {errors.location && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.location.message}
-                  </p>
-                )}
+                {errors.workMode && <p className={errCls}>{errors.workMode.message}</p>}
               </div>
             </div>
 
-            {/* Degree */}
+            {/* ── Location ── */}
             <div>
-              <label
-                htmlFor="degree"
-                className="block text-sm font-medium text-foreground mb-2"
-              >
-                Degree / Education
-              </label>
-              <input
-                id="degree"
-                type="text"
-                {...register('degree')}
-                className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                  errors.degree
-                    ? 'border-red-500 dark:border-red-500'
-                    : 'border-foreground/20'
-                }`}
-                placeholder="e.g., B.Tech, MBA, Bachelors, Masters"
-                disabled={isSubmitting}
-              />
-              {errors.degree && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.degree.message}
-                </p>
+              <label htmlFor="location" className={labelCls}>Location <span className="text-red-500">*</span></label>
+              <Controller control={control} name="location" render={({ field }) => (
+                <LocationAutocomplete id="location" value={field.value || ''} onChange={field.onChange}
+                  placeholder="e.g., Mumbai, Dubai" disabled={isSubmitting} allowCustom />
+              )} />
+              {errors.location && <p className={errCls}>{errors.location.message}</p>}
+            </div>
+
+            {/* ── Industry & Department ── */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="industryType" className={labelCls}>Industry</label>
+                <select id="industryType" {...register('industryType', {
+                  onChange: () => { setValue('department', ''); setValue('jobRole', ''); },
+                })} className={inputCls()} disabled={isSubmitting}>
+                  <option value="">Select industry</option>
+                  {INDUSTRY_LIST.map((ind) => <option key={ind} value={ind}>{ind}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="department" className={labelCls}>Department</label>
+                <select id="department" {...register('department')}
+                  className={inputCls()} disabled={isSubmitting || !selectedIndustry}>
+                  <option value="">{selectedIndustry ? 'Select department' : 'Select industry first'}</option>
+                  {departmentOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* ── Job Role (dependent on Industry) ── */}
+            <div>
+              <label htmlFor="jobRole" className={labelCls}>Job Role</label>
+              <select id="jobRole" {...register('jobRole')}
+                className={inputCls(!!errors.jobRole)} disabled={isSubmitting || !selectedIndustry}>
+                <option value="">{selectedIndustry ? 'Select job role' : 'Select industry first'}</option>
+                {jobRoleOptions.map((r) => <option key={r} value={r}>{r}</option>)}
+              </select>
+              {errors.jobRole && <p className={errCls}>{errors.jobRole.message}</p>}
+              {/* Custom role text input when "Others" is selected */}
+              {selectedJobRole === 'Others' && (
+                <input type="text" {...register('jobRole')} placeholder="Specify your custom job role"
+                  className={`mt-2 ${inputCls(!!errors.jobRole)}`} disabled={isSubmitting} />
               )}
             </div>
 
-            {/* Salary Range Grid */}
+            {/* ── Skills Required ── */}
+            <div>
+              <label htmlFor="skillsRequired" className={labelCls}>Skills Required</label>
+              <Controller control={control} name="skillsRequired" render={({ field }) => (
+                <TagInput id="skillsRequired" value={field.value ?? []}
+                  onChange={field.onChange} suggestions={COMMON_SKILLS}
+                  placeholder="Type a skill and press Enter…" disabled={isSubmitting} />
+              )} />
+              {errors.skillsRequired && <p className={errCls}>{errors.skillsRequired.message}</p>}
+            </div>
+
+            {/* ── Qualification ── */}
+            <div>
+              <label htmlFor="qualification" className={labelCls}>Minimum Qualification</label>
+              <select id="qualification" {...register('qualification')}
+                className={inputCls(!!errors.qualification)} disabled={isSubmitting}>
+                <option value="">Select qualification</option>
+                {QUALIFICATION_OPTIONS.map((q) => <option key={q} value={q}>{q}</option>)}
+              </select>
+              {errors.qualification && <p className={errCls}>{errors.qualification.message}</p>}
+            </div>
+
+            {/* ── Degree Required ── */}
+            <div>
+              <label htmlFor="degreeRequired" className={labelCls}>Degree Required</label>
+              <input id="degreeRequired" type="text" {...register('degreeRequired')}
+                className={inputCls(!!errors.degreeRequired)}
+                placeholder="e.g., B.Tech in Computer Science, MBA" disabled={isSubmitting} />
+              {errors.degreeRequired && <p className={errCls}>{errors.degreeRequired.message}</p>}
+            </div>
+
+            {/* ── Languages Known ── */}
+            <div>
+              <label htmlFor="languagesKnown" className={labelCls}>Languages Required</label>
+              <Controller control={control} name="languagesKnown" render={({ field }) => (
+                <MultiSelect id="languagesKnown" options={LANGUAGE_OPTIONS}
+                  value={field.value ?? []} onChange={field.onChange}
+                  placeholder="Select required languages" disabled={isSubmitting} />
+              )} />
+              {errors.languagesKnown && <p className={errCls}>{errors.languagesKnown.message}</p>}
+            </div>
+
+            {/* ── Salary ── */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Salary Min */}
               <div>
-                <label
-                  htmlFor="salaryMin"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Salary Minimum (₹)
-                </label>
-                <input
-                  id="salaryMin"
-                  type="number"
-                  step="1000"
-                  min="0"
+                <label htmlFor="salaryMin" className={labelCls}>Salary Minimum (₹)</label>
+                <input id="salaryMin" type="number" step="1000" min="0"
                   {...register('salaryMin', {
                     valueAsNumber: true,
-                    setValueAs: (value) =>
-                      value === '' || value === null ? undefined : Number(value),
+                    setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
                   })}
-                  className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.salaryMin
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  placeholder="e.g., 50000"
-                  disabled={isSubmitting}
-                />
-                {errors.salaryMin && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.salaryMin.message}
-                  </p>
-                )}
+                  className={inputCls(!!errors.salaryMin)} placeholder="e.g., 500000" disabled={isSubmitting} />
+                {errors.salaryMin && <p className={errCls}>{errors.salaryMin.message}</p>}
               </div>
-
-              {/* Salary Max */}
               <div>
-                <label
-                  htmlFor="salaryMax"
-                  className="block text-sm font-medium text-foreground mb-2"
-                >
-                  Salary Maximum (₹)
-                </label>
-                <input
-                  id="salaryMax"
-                  type="number"
-                  step="1000"
-                  min="0"
+                <label htmlFor="salaryMax" className={labelCls}>Salary Maximum (₹)</label>
+                <input id="salaryMax" type="number" step="1000" min="0"
                   {...register('salaryMax', {
                     valueAsNumber: true,
-                    setValueAs: (value) =>
-                      value === '' || value === null ? undefined : Number(value),
+                    setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
                   })}
-                  className={`w-full px-4 py-2 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.salaryMax
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  placeholder="e.g., 100000"
-                  disabled={isSubmitting}
-                />
-                {errors.salaryMax && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                    {errors.salaryMax.message}
-                  </p>
-                )}
+                  className={inputCls(!!errors.salaryMax)} placeholder="e.g., 1200000" disabled={isSubmitting} />
+                {errors.salaryMax && <p className={errCls}>{errors.salaryMax.message}</p>}
               </div>
             </div>
 
-            {/* Experience */}
+            {/* ── Experience Range ── */}
             <div>
-              <label
-                htmlFor="experience"
-                className="block text-sm font-medium text-foreground mb-2"
-              >
-                Experience Required (Years)
-              </label>
-              <div className="relative">
-                <input
-                  id="experience"
-                  type="number"
-                  step="1"
-                  min="0"
-                  {...register('experience', {
-                    valueAsNumber: true,
-                    setValueAs: (value) =>
-                      value === '' || value === null ? undefined : Number(value),
-                  })}
-                  className={`w-full px-4 py-2 pr-16 border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent text-sm ${
-                    errors.experience
-                      ? 'border-red-500 dark:border-red-500'
-                      : 'border-foreground/20'
-                  }`}
-                  placeholder="e.g., 3"
-                  disabled={isSubmitting}
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-foreground/60">
-                  Years
-                </span>
+              <label className={labelCls}>Experience Required (Years)</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <input id="minExperience" type="number" step="1" min="0"
+                    {...register('minExperience', {
+                      valueAsNumber: true,
+                      setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
+                    })}
+                    className={inputCls(!!errors.minExperience)} placeholder="Min (e.g., 2)"
+                    disabled={isSubmitting} />
+                  {errors.minExperience && <p className={errCls}>{errors.minExperience.message}</p>}
+                  <p className="mt-1 text-xs text-foreground/50">Minimum years</p>
+                </div>
+                <div>
+                  <input id="maxExperience" type="number" step="1" min="0"
+                    {...register('maxExperience', {
+                      valueAsNumber: true,
+                      setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
+                    })}
+                    className={inputCls(!!errors.maxExperience)} placeholder="Max (e.g., 5)"
+                    disabled={isSubmitting} />
+                  {errors.maxExperience && <p className={errCls}>{errors.maxExperience.message}</p>}
+                  <p className="mt-1 text-xs text-foreground/50">Maximum years</p>
+                </div>
               </div>
-              {errors.experience && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.experience.message}
-                </p>
-              )}
             </div>
 
-            {/* Submit Button */}
+            {/* ── Submit ── */}
             <div className="flex items-center gap-4 pt-4">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex items-center gap-2 bg-foreground text-background px-6 py-2 rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Posting...</span>
-                  </>
-                ) : (
-                  'Post Job'
-                )}
+              <button type="submit" disabled={isSubmitting}
+                className="flex items-center gap-2 bg-foreground text-background px-6 py-2 rounded-md
+                  font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20
+                  disabled:opacity-50 disabled:cursor-not-allowed transition-opacity">
+                {isSubmitting ? (<><Loader2 className="w-4 h-4 animate-spin" /><span>Posting...</span></>) : 'Post Job'}
               </button>
-              <Link
-                href="/employer/jobs"
-                className="px-6 py-2 border border-foreground/20 rounded-md font-medium hover:bg-foreground/5 transition-colors text-sm"
-              >
+              <Link href="/employer"
+                className="px-6 py-2 border border-foreground/20 rounded-md font-medium
+                  hover:bg-foreground/5 transition-colors text-sm">
                 Cancel
               </Link>
             </div>
+
           </form>
         </div>
       </div>

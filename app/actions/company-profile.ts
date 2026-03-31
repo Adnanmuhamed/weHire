@@ -109,16 +109,23 @@ export async function getCompanyProfile(): Promise<GetCompanyProfileResult> {
       return { error: 'Only employers can access company profile' };
     }
 
-    const [company, userDetails] = await Promise.all([
-      db.company.findUnique({ where: { ownerId: user.id } }),
-      db.user.findUnique({
-        where: { id: user.id },
-        select: { email: true, mobile: true, designation: true, role: true },
-      }),
-    ]);
-
-    if (!company) return { error: 'Company not found' };
+    const userDetails = await db.user.findUnique({
+      where: { id: user.id },
+      select: { email: true, mobile: true, designation: true, role: true },
+    });
     if (!userDetails) return { error: 'User not found' };
+
+    // Find or auto-create a company row so the profile page always loads
+    let company = await db.company.findUnique({ where: { ownerId: user.id } });
+    if (!company) {
+      company = await db.company.create({
+        data: {
+          name: userDetails.email.split('@')[0] || 'My Company',
+          description: '',
+          ownerId: user.id,
+        },
+      });
+    }
 
     return {
       success: true,

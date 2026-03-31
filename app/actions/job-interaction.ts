@@ -44,7 +44,8 @@ export interface SavedJobItem {
   workMode: string;
   salaryMin: number | null;
   salaryMax: number | null;
-  experience: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
   createdAt: Date;
   company: { id: string; name: string; logoUrl: string | null };
 }
@@ -76,7 +77,8 @@ export async function getSavedJobs(): Promise<GetSavedJobsResult> {
             workMode: true,
             salaryMin: true,
             salaryMax: true,
-            experience: true,
+            minExperience: true,
+            maxExperience: true,
             createdAt: true,
             company: {
               select: { id: true, name: true, logoUrl: true },
@@ -108,6 +110,8 @@ export interface UpdateJobPreferencesInput {
   expectedSalaryMin?: number | null;
   expectedSalaryMax?: number | null;
   workModes?: WorkMode[];
+  industries?: string[];
+  departments?: string[];
 }
 
 export interface UpdateJobPreferencesResult {
@@ -124,6 +128,8 @@ export interface JobPreferencesResult {
     expectedSalaryMin: number | null;
     expectedSalaryMax: number | null;
     workModes: WorkMode[];
+    industries: string[];
+    departments: string[];
   } | null;
 }
 
@@ -144,6 +150,8 @@ export async function getJobPreferences(): Promise<JobPreferencesResult> {
             expectedSalaryMin: prefs.expectedSalaryMin,
             expectedSalaryMax: prefs.expectedSalaryMax,
             workModes: prefs.workModes,
+            industries: (prefs as any).industries ?? [],
+            departments: (prefs as any).departments ?? [],
           }
         : null,
     };
@@ -170,6 +178,8 @@ export async function updateJobPreferences(
         expectedSalaryMin: data.expectedSalaryMin ?? null,
         expectedSalaryMax: data.expectedSalaryMax ?? null,
         workModes: data.workModes ?? [],
+        industries: data.industries ?? [],
+        departments: data.departments ?? [],
       },
       update: {
         locations: data.locations ?? undefined,
@@ -177,6 +187,8 @@ export async function updateJobPreferences(
         expectedSalaryMin: data.expectedSalaryMin ?? undefined,
         expectedSalaryMax: data.expectedSalaryMax ?? undefined,
         workModes: data.workModes ?? undefined,
+        industries: data.industries ?? undefined,
+        departments: data.departments ?? undefined,
       },
     });
     revalidatePath('/dashboard');
@@ -197,7 +209,8 @@ export interface RecommendedJobItem {
   workMode: string;
   salaryMin: number | null;
   salaryMax: number | null;
-  experience: number | null;
+  minExperience: number | null;
+  maxExperience: number | null;
   createdAt: Date;
   company: { id: string; name: string; logoUrl: string | null };
 }
@@ -220,7 +233,7 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
     const prefs = await db.jobPreference.findUnique({
       where: { userId: user.id },
     });
-    if (!prefs || (prefs.locations.length === 0 && prefs.titles.length === 0 && prefs.workModes.length === 0)) {
+    if (!prefs || (prefs.locations.length === 0 && prefs.titles.length === 0 && prefs.workModes.length === 0 && ((prefs as any).industries ?? []).length === 0)) {
       // No preferences: return recent open jobs
       const jobs = await db.job.findMany({
         where: { status: JobStatus.OPEN },
@@ -235,7 +248,8 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
           workMode: true,
           salaryMin: true,
           salaryMax: true,
-          experience: true,
+          minExperience: true,
+          maxExperience: true,
           createdAt: true,
           company: { select: { id: true, name: true, logoUrl: true } },
         },
@@ -274,6 +288,20 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
         salaryMin: { gte: prefs.expectedSalaryMin },
       });
     }
+    // Match on industries
+    const prefsIndustries: string[] = (prefs as any).industries ?? [];
+    if (prefsIndustries.length > 0) {
+      orConditions.push({
+        industryType: { in: prefsIndustries },
+      });
+    }
+    // Match on departments
+    const prefsDepartments: string[] = (prefs as any).departments ?? [];
+    if (prefsDepartments.length > 0) {
+      orConditions.push({
+        department: { in: prefsDepartments },
+      });
+    }
 
     const where: Record<string, unknown> = {
       status: JobStatus.OPEN,
@@ -296,7 +324,8 @@ export async function getRecommendedJobs(): Promise<GetRecommendedJobsResult> {
         workMode: true,
         salaryMin: true,
         salaryMax: true,
-        experience: true,
+        minExperience: true,
+        maxExperience: true,
         createdAt: true,
         company: { select: { id: true, name: true, logoUrl: true } },
       },
@@ -339,7 +368,8 @@ export async function getLatestJobs(
         workMode: true,
         salaryMin: true,
         salaryMax: true,
-        experience: true,
+        minExperience: true,
+        maxExperience: true,
         createdAt: true,
         company: { select: { id: true, name: true, logoUrl: true } },
       },

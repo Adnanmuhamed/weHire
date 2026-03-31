@@ -42,7 +42,7 @@ export default async function JobApplicationsPage({ params }: PageProps) {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 max-w-6xl">
         <div className="mb-8">
           <Link
-            href="/employer/jobs"
+            href="/employer"
             className="text-sm text-foreground/70 hover:text-foreground mb-4 inline-block"
           >
             ← Back to Jobs

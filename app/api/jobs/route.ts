@@ -59,7 +59,8 @@ async function postHandler(request: NextRequest) {
     status: body.status,
     salaryMin: body.salaryMin,
     salaryMax: body.salaryMax,
-    experience: body.experience,
+    minExperience: body.minExperience,
+    maxExperience: body.maxExperience,
   });
 
   return NextResponse.json(
@@ -143,9 +144,12 @@ async function getHandler(request: NextRequest) {
       ...(params.query && { query: params.query }),
       ...(params.location && { location: params.location }),
       ...(params.jobType && { jobType: params.jobType }),
+      ...(params.workMode && { workMode: params.workMode }),
       ...(params.minSalary !== undefined && { minSalary: params.minSalary }),
       ...(params.maxSalary !== undefined && { maxSalary: params.maxSalary }),
       ...(params.experience !== undefined && { experience: params.experience }),
+      ...(params.industryType && { industryType: params.industryType }),
+      ...(params.department && { department: params.department }),
     },
     ...(params.sort && { sort: params.sort }),
     page: params.page,

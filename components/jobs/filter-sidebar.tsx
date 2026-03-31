@@ -1,9 +1,18 @@
 'use client';
 
+/**
+ * Jobs Filter Sidebar
+ *
+ * Sidebar filters for the /jobs page:
+ * Work Mode, Job Type, Industry, Department (cascading), Salary, Degree, Company.
+ * Updates URL params on change.
+ */
+
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { Filter } from 'lucide-react';
 import { JobType, WorkMode } from '@prisma/client';
+import { INDUSTRY_LIST, getDepartments } from '@/lib/constants/industries';
 
 export interface CompanyOption {
   id: string;
@@ -52,6 +61,8 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
   const searchParams = useSearchParams();
   const [companySearch, setCompanySearch] = useState('');
   const degreeFromUrl = searchParams.get('degree') ?? '';
+  const industryFromUrl = searchParams.get('industry') ?? '';
+  const departmentFromUrl = searchParams.get('department') ?? '';
 
   const updateParams = useCallback(
     (updates: Record<string, string | string[] | undefined>) => {
@@ -81,6 +92,8 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
   );
   const salary = searchParams.get('salary') ?? '';
   const companyId = searchParams.get('companyId') ?? '';
+
+  const departmentOptions = industryFromUrl ? getDepartments(industryFromUrl) : [];
 
   const toggleWorkMode = (mode: WorkMode) => {
     const next = workModes.includes(mode)
@@ -135,6 +148,76 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
           </div>
         </div>
 
+        {/* Job Type */}
+        <div>
+          <p className="block text-sm font-medium text-foreground mb-2">
+            Job Type
+          </p>
+          <div className="space-y-2">
+            {JOB_TYPES.map(({ value, label }) => (
+              <label
+                key={value}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={jobTypes.includes(value)}
+                  onChange={() => toggleJobType(value)}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Industry */}
+        <div>
+          <p className="block text-sm font-medium text-foreground mb-2">
+            Industry
+          </p>
+          <select
+            value={industryFromUrl}
+            onChange={(e) => {
+              const value = e.target.value;
+              // Clear department when industry changes
+              updateParams({ industry: value || undefined, department: undefined });
+            }}
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+          >
+            <option value="">All Industries</option>
+            {INDUSTRY_LIST.map((ind) => (
+              <option key={ind} value={ind}>
+                {ind}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Department — shown when industry selected */}
+        {industryFromUrl && departmentOptions.length > 0 && (
+          <div>
+            <p className="block text-sm font-medium text-foreground mb-2">
+              Department
+            </p>
+            <select
+              value={departmentFromUrl}
+              onChange={(e) => {
+                const value = e.target.value;
+                updateParams({ department: value || undefined });
+              }}
+              className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
+            >
+              <option value="">All Departments</option>
+              {departmentOptions.map((dept) => (
+                <option key={dept} value={dept}>
+                  {dept}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Salary Range */}
         <div>
           <p className="block text-sm font-medium text-foreground mb-2">
@@ -152,29 +235,6 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
                   checked={salary === value}
                   onChange={() => updateParams({ salary: value })}
                   className="w-4 h-4 border-foreground/20 text-foreground focus:ring-2 focus:ring-foreground/20"
-                />
-                <span className="text-sm text-foreground">{label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Job Type */}
-        <div>
-          <p className="block text-sm font-medium text-foreground mb-2">
-            Job Type
-          </p>
-          <div className="space-y-2">
-            {JOB_TYPES.map(({ value, label }) => (
-              <label
-                key={value}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={jobTypes.includes(value)}
-                  onChange={() => toggleJobType(value)}
-                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
                 />
                 <span className="text-sm text-foreground">{label}</span>
               </label>
