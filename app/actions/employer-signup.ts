@@ -52,7 +52,7 @@ export async function registerEmployerAction(
           create: {
             name: data.companyName.trim(),
             description: '',
-            accountType: data.accountType,
+            companyType: data.accountType,
             hiringFor: data.hiringFor,
             employeeCount: data.employeeCount,
             address: data.address.trim(),

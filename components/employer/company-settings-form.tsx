@@ -4,25 +4,11 @@ import { useState, FormEvent } from 'react';
 import { toast } from 'sonner';
 import { updateCompany } from '@/app/actions/company';
 import type { UpdateCompanyInput } from '@/app/actions/company';
-import { CompanyType } from '@prisma/client';
 import { Loader2 } from 'lucide-react';
-
-const COMPANY_TYPES: { value: CompanyType; label: string }[] = [
-  { value: 'STARTUP', label: 'Startup' },
-  { value: 'CORPORATE', label: 'Corporate' },
-  { value: 'FOREIGN_MNC', label: 'Foreign MNC' },
-  { value: 'INDIAN_MNC', label: 'Indian MNC' },
-  { value: 'GOVT', label: 'Govt' },
-  { value: 'OTHERS', label: 'Others' },
-];
-
-const SIZE_OPTIONS = [
-  { value: '', label: 'Select size' },
-  { value: '1-10', label: '1-10' },
-  { value: '11-50', label: '11-50' },
-  { value: '50-200', label: '50-200' },
-  { value: '200+', label: '200+' },
-];
+import { 
+  COMPANY_TYPE_OPTIONS, 
+  COMPANY_SIZE_OPTIONS 
+} from '@/lib/constants/company-fields';
 
 interface CompanySettingsFormProps {
   company: {
@@ -32,7 +18,7 @@ interface CompanySettingsFormProps {
     website: string | null;
     location: string | null;
     logoUrl: string | null;
-    type: CompanyType;
+    type: string | null;
     size: string | null;
   };
 }
@@ -53,7 +39,7 @@ export default function CompanySettingsForm({ company }: CompanySettingsFormProp
       website: (form.querySelector('[name="website"]') as HTMLInputElement)?.value?.trim() ?? '',
       location: (form.querySelector('[name="location"]') as HTMLInputElement)?.value?.trim() ?? '',
       logoUrl: (form.querySelector('[name="logoUrl"]') as HTMLInputElement)?.value?.trim() ?? '',
-      type: (form.querySelector('[name="type"]') as HTMLSelectElement)?.value as CompanyType,
+      type: (form.querySelector('[name="type"]') as HTMLSelectElement)?.value,
       size: (form.querySelector('[name="size"]') as HTMLSelectElement)?.value?.trim() || undefined,
     };
 
@@ -66,7 +52,7 @@ export default function CompanySettingsForm({ company }: CompanySettingsFormProp
     toast.success('Company profile updated');
   };
 
-  const defaultType = company.type ?? 'STARTUP';
+  const defaultType = company.type ?? '';
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -123,9 +109,10 @@ export default function CompanySettingsForm({ company }: CompanySettingsFormProp
               className="w-full px-4 py-2 border border-foreground/20 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
               disabled={isSubmitting}
             >
-              {COMPANY_TYPES.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
+              <option value="">Select type</option>
+              {COMPANY_TYPE_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}
                 </option>
               ))}
             </select>
@@ -163,9 +150,10 @@ export default function CompanySettingsForm({ company }: CompanySettingsFormProp
               className="w-full px-4 py-2 border border-foreground/20 rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20"
               disabled={isSubmitting}
             >
-              {SIZE_OPTIONS.map(({ value, label }) => (
-                <option key={value || 'empty'} value={value}>
-                  {label}
+              <option value="">Select size</option>
+              {COMPANY_SIZE_OPTIONS.map((val) => (
+                <option key={val} value={val}>
+                  {val}
                 </option>
               ))}
             </select>

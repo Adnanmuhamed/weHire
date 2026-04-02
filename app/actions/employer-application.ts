@@ -187,7 +187,7 @@ export interface AddReviewResult {
   reviewId?: string;
 }
 
-export async function addReview(
+export async function submitCandidateReview(
   data: AddReviewInput
 ): Promise<AddReviewResult> {
   try {
@@ -223,10 +223,11 @@ export async function addReview(
       return { error: 'You can only review candidates who applied to your jobs' };
     }
 
-    const review = await db.review.create({
+    const review = await db.candidateReview.create({
       data: {
-        candidateId: data.candidateId,
-        employerId: user.id,
+        candidateId: profile.userId,
+        authorId: user.id,
+        companyId: company.id,
         rating: data.rating,
         comment: data.comment.trim(),
       },

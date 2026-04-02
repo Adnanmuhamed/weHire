@@ -508,21 +508,15 @@ export async function getCandidateReviews(): Promise<GetCandidateReviewsResult> 
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
 
-    const profile = await db.profile.findUnique({
-      where: { userId: user.id },
-      select: { id: true },
-    });
-    if (!profile) return { error: 'Profile not found' };
-
-    const reviews = await db.review.findMany({
-      where: { candidateId: profile.id },
+    const reviews = await db.candidateReview.findMany({
+      where: { candidateId: user.id },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         rating: true,
         comment: true,
         createdAt: true,
-        employer: {
+        author: {
           select: { email: true },
         },
       },
@@ -530,12 +524,15 @@ export async function getCandidateReviews(): Promise<GetCandidateReviewsResult> 
 
     const averageRating =
       reviews.length > 0
-        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        ? reviews.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / reviews.length
         : 0;
 
     return {
       success: true,
-      reviews,
+      reviews: reviews.map(r => ({
+        ...r,
+        employer: r.author
+      })),
       averageRating: Math.round(averageRating * 10) / 10,
     };
   } catch (e) {

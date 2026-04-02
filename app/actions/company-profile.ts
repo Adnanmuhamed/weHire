@@ -6,7 +6,6 @@ import { Role } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 export interface UpdateCompanyProfileInput {
-  accountType?: string;
   industryType?: string;
   websiteUrl?: string;
   designation?: string;
@@ -17,6 +16,9 @@ export interface UpdateCompanyProfileInput {
   gstin?: string;
   about?: string;
   foundedYear?: string;
+  companyType?: string;
+  companySize?: string;
+  headquarters?: string;
 }
 
 export interface UpdateCompanyProfileResult {
@@ -44,7 +46,6 @@ export async function updateCompanyProfile(
     await db.company.update({
       where: { id: company.id },
       data: {
-        accountType: data.accountType?.trim() || undefined,
         industryType: data.industryType?.trim() || undefined,
         websiteUrl: data.websiteUrl?.trim() || undefined,
         address: data.address?.trim() || undefined,
@@ -54,6 +55,9 @@ export async function updateCompanyProfile(
         gstin: data.gstin?.trim() || undefined,
         about: data.about?.trim() || undefined,
         foundedYear: data.foundedYear?.trim() || undefined,
+        companyType: data.companyType?.trim() || undefined,
+        companySize: data.companySize?.trim() || undefined,
+        headquarters: data.headquarters?.trim() || undefined,
       },
     });
 
@@ -79,7 +83,6 @@ export interface GetCompanyProfileResult {
   company?: {
     id: string;
     name: string;
-    accountType: string | null;
     industryType: string | null;
     websiteUrl: string | null;
     address: string | null;
@@ -89,6 +92,9 @@ export interface GetCompanyProfileResult {
     gstin: string | null;
     about: string | null;
     foundedYear: string | null;
+    companyType: string | null;
+    companySize: string | null;
+    headquarters: string | null;
     employeeCount: string | null;
     logoUrl: string | null;
     rating: number | null;
@@ -132,7 +138,6 @@ export async function getCompanyProfile(): Promise<GetCompanyProfileResult> {
       company: {
         id: company.id,
         name: company.name,
-        accountType: company.accountType,
         industryType: company.industryType,
         websiteUrl: company.websiteUrl,
         address: company.address,
@@ -142,6 +147,9 @@ export async function getCompanyProfile(): Promise<GetCompanyProfileResult> {
         gstin: company.gstin,
         about: company.about,
         foundedYear: company.foundedYear,
+        companyType: company.companyType,
+        companySize: company.companySize,
+        headquarters: company.headquarters,
         employeeCount: company.employeeCount,
         logoUrl: company.logoUrl,
         rating: company.rating,

@@ -2,17 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getAllCompanies, getCompanyLocations } from '@/app/actions/company-public';
 import type { CompanyListFilters } from '@/app/actions/company-public';
-import { CompanyType } from '@prisma/client';
 import CompaniesFilterSidebar from '@/components/companies/filter-sidebar';
-
-const COMPANY_TYPE_LABELS: Record<CompanyType, string> = {
-  CORPORATE: 'Corporate',
-  FOREIGN_MNC: 'Foreign MNC',
-  STARTUP: 'Startup',
-  INDIAN_MNC: 'Indian MNC',
-  GOVT: 'Govt',
-  OTHERS: 'Others',
-};
 
 interface CompaniesPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -34,13 +24,17 @@ function buildFilters(
   const locationArr = getAll('location')
     .map((l) => (typeof l === 'string' ? l : '').trim())
     .filter(Boolean);
-  const typeArr = getAll('type').filter((v): v is CompanyType =>
-    ['CORPORATE', 'FOREIGN_MNC', 'STARTUP', 'INDIAN_MNC', 'GOVT', 'OTHERS'].includes(v)
-  );
+  const typeArr = getAll('type').filter(Boolean) as string[];
+  const industryArr = getAll('industry').filter(Boolean) as string[];
+  const sizeArr = getAll('size').filter(Boolean) as string[];
+  
   const filter: CompanyListFilters = {};
   if (search) filter.search = search;
   if (locationArr.length) filter.location = locationArr;
   if (typeArr.length) filter.type = typeArr;
+  if (industryArr.length) filter.industry = industryArr;
+  if (sizeArr.length) filter.size = sizeArr;
+  
   return filter;
 }
 
@@ -95,7 +89,7 @@ export default async function CompaniesPage({ searchParams }: CompaniesPageProps
                       {company.name}
                     </h2>
                     <span className="px-2 py-0.5 rounded bg-foreground/10 text-xs font-medium text-foreground">
-                      {COMPANY_TYPE_LABELS[company.type] ?? company.type}
+                      {company.type || 'Company'}
                     </span>
                     {company.location && (
                       <p className="text-sm text-foreground/60 line-clamp-1">

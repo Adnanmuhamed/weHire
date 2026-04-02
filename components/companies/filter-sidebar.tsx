@@ -3,17 +3,12 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { Filter } from 'lucide-react';
-import { CompanyType } from '@prisma/client';
+import { 
+  COMPANY_TYPE_OPTIONS, 
+  INDUSTRY_OPTIONS, 
+  COMPANY_SIZE_OPTIONS 
+} from '@/lib/constants/company-fields';
 import LocationAutocomplete from '@/components/ui/location-autocomplete';
-
-const COMPANY_TYPES: { value: CompanyType; label: string }[] = [
-  { value: 'CORPORATE', label: 'Corporate' },
-  { value: 'FOREIGN_MNC', label: 'Foreign MNC' },
-  { value: 'STARTUP', label: 'Startup' },
-  { value: 'INDIAN_MNC', label: 'Indian MNC' },
-  { value: 'GOVT', label: 'Govt' },
-  { value: 'OTHERS', label: 'Others' },
-];
 
 const LOCATIONS_VISIBLE_INITIAL = 5;
 
@@ -39,12 +34,15 @@ export default function CompaniesFilterSidebar({
     [searchParams]
   );
   const types = useMemo(
-    () =>
-      searchParams
-        .getAll('type')
-        .filter((v): v is CompanyType =>
-          ['CORPORATE', 'FOREIGN_MNC', 'STARTUP', 'INDIAN_MNC', 'GOVT', 'OTHERS'].includes(v)
-        ),
+    () => searchParams.getAll('type').filter(Boolean),
+    [searchParams]
+  );
+  const industries = useMemo(
+    () => searchParams.getAll('industry').filter(Boolean),
+    [searchParams]
+  );
+  const sizes = useMemo(
+    () => searchParams.getAll('size').filter(Boolean),
     [searchParams]
   );
 
@@ -72,11 +70,25 @@ export default function CompaniesFilterSidebar({
     updateParams({ location: next });
   };
 
-  const toggleType = (type: CompanyType) => {
+  const toggleType = (type: string) => {
     const next = types.includes(type)
       ? types.filter((t) => t !== type)
       : [...types, type];
     updateParams({ type: next });
+  };
+  
+  const toggleIndustry = (industry: string) => {
+    const next = industries.includes(industry)
+      ? industries.filter((i) => i !== industry)
+      : [...industries, industry];
+    updateParams({ industry: next });
+  };
+  
+  const toggleSize = (size: string) => {
+    const next = sizes.includes(size)
+      ? sizes.filter((s) => s !== size)
+      : [...sizes, size];
+    updateParams({ size: next });
   };
 
   const locationsToShow = showAllLocations
@@ -196,18 +208,64 @@ export default function CompaniesFilterSidebar({
             Company Type
           </p>
           <div className="space-y-2">
-            {COMPANY_TYPES.map(({ value, label }) => (
+            {COMPANY_TYPE_OPTIONS.map((val) => (
               <label
-                key={value}
+                key={val}
                 className="flex items-center gap-2 cursor-pointer"
               >
                 <input
                   type="checkbox"
-                  checked={types.includes(value)}
-                  onChange={() => toggleType(value)}
+                  checked={types.includes(val)}
+                  onChange={() => toggleType(val)}
                   className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
                 />
-                <span className="text-sm text-foreground">{label}</span>
+                <span className="text-sm text-foreground">{val}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        
+        {/* Industry Type */}
+        <div>
+          <p className="block text-sm font-medium text-foreground mb-2">
+            Industry Type
+          </p>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {INDUSTRY_OPTIONS.map((val) => (
+              <label
+                key={val}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={industries.includes(val)}
+                  onChange={() => toggleIndustry(val)}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{val}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Company Size */}
+        <div>
+          <p className="block text-sm font-medium text-foreground mb-2">
+            Company Size
+          </p>
+          <div className="space-y-2">
+            {COMPANY_SIZE_OPTIONS.map((val) => (
+              <label
+                key={val}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={sizes.includes(val)}
+                  onChange={() => toggleSize(val)}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{val}</span>
               </label>
             ))}
           </div>

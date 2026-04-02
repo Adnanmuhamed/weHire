@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 import { requireEmployer } from '@/lib/rbac';
 import { db } from '@/lib/db';
 import CompanySettingsForm from '@/components/employer/company-settings-form';
+import { ExternalLink } from 'lucide-react';
 
 /**
  * Employer Company Profile Settings
@@ -23,8 +24,8 @@ export default async function EmployerSettingsPage() {
       website: true,
       location: true,
       logoUrl: true,
-      type: true,
-      size: true,
+      companyType: true,
+      companySize: true,
     },
   });
 
@@ -43,17 +44,31 @@ export default async function EmployerSettingsPage() {
             ← Back to Dashboard
           </Link>
         </div>
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground">Company Profile</h1>
-          <p className="mt-1 text-foreground/70">
-            Update your company details. Location and type power the companies directory filters.
-          </p>
+        <header className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Company Profile</h1>
+            <p className="mt-1 text-foreground/70">
+              Update your company details. Location and type power the companies directory filters.
+            </p>
+          </div>
+          {company.id && (
+            <Link
+              href={`/company/${company.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
+            >
+              <ExternalLink className="w-4 h-4" />
+              View Public Profile
+            </Link>
+          )}
         </header>
         <div className="border border-foreground/10 rounded-lg bg-background p-6 md:p-8 shadow-sm">
           <CompanySettingsForm
             company={{
               ...company,
-              type: company.type ?? 'STARTUP',
+              type: company.companyType || '',
+              size: company.companySize || '',
             }}
           />
         </div>

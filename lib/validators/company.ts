@@ -1,14 +1,5 @@
 import { z } from 'zod';
-
-const COMPANY_TYPES = [
-  'CORPORATE',
-  'FOREIGN_MNC',
-  'STARTUP',
-  'INDIAN_MNC',
-  'GOVT',
-  'OTHERS',
-] as const;
-
+import { COMPANY_TYPE_OPTIONS } from '@/lib/constants/company-fields';
 export const UpdateCompanySchema = z.object({
   name: z.string().min(2, 'Company name must be at least 2 characters'),
   description: z
@@ -25,7 +16,7 @@ export const UpdateCompanySchema = z.object({
     .union([z.string().url('Please enter a valid URL'), z.literal('')])
     .optional()
     .nullable(),
-  type: z.enum(COMPANY_TYPES, {
+  type: z.enum(COMPANY_TYPE_OPTIONS as unknown as [string, ...string[]], {
     errorMap: () => ({ message: 'Please select a valid company type' }),
   }),
   size: z.string().max(50).optional().nullable().or(z.literal('')),

@@ -1,7 +1,9 @@
 'use server';
 
 import { db } from '@/lib/db';
-import { JobStatus, JobType, CompanyType } from '@prisma/client';
+import { JobStatus, JobType } from '@prisma/client';
+import { getCurrentUser } from '@/lib/auth';
+import { revalidatePath } from 'next/cache';
 
 /**
  * Public Company Server Actions
@@ -14,7 +16,9 @@ export interface CompanyListFilters {
   search?: string;
   /** Single location or multiple (OR within location, AND with other filters) */
   location?: string | string[];
-  type?: CompanyType | CompanyType[];
+  type?: string | string[];
+  industry?: string | string[];
+  size?: string | string[];
 }
 
 export interface CompanyLocationCount {
@@ -32,8 +36,8 @@ export interface CompanyListItem {
   id: string;
   name: string;
   logoUrl: string | null;
-  location: string | null;
-  type: CompanyType;
+  location: string | null; // mapping headquarters to UI
+  type: string | null;     // mapping companyType to UI
 }
 
 export interface CompanyProfileJob {
@@ -53,7 +57,7 @@ export interface CompanyProfile {
   website: string | null;
   location: string | null;
   logoUrl: string | null;
-  type: CompanyType;
+  type: string | null;
   size: string | null;
   jobs: CompanyProfileJob[];
 }
@@ -80,7 +84,7 @@ export async function getAllCompanies(
 ): Promise<GetAllCompaniesResult> {
   try {
     const where: Record<string, unknown> = {};
-    const { search, location, type } = filter;
+    const { search, location, type, industry, size } = filter;
 
     if (search && search.trim().length > 0) {
       where.name = {
@@ -95,13 +99,21 @@ export async function getAllCompanies(
         ? [location.trim()]
         : [];
     if (locations.length > 0) {
-      where.location = locations.length === 1
+      where.headquarters = locations.length === 1
         ? locations[0]
         : { in: locations };
     }
 
     if (type !== undefined) {
-      where.type = Array.isArray(type) ? { in: type } : type;
+      where.companyType = Array.isArray(type) ? { in: type } : type;
+    }
+    
+    if (industry !== undefined) {
+      where.industryType = Array.isArray(industry) ? { in: industry } : industry;
+    }
+    
+    if (size !== undefined) {
+      where.companySize = Array.isArray(size) ? { in: size } : size;
     }
 
     const companies = await db.company.findMany({
@@ -111,11 +123,21 @@ export async function getAllCompanies(
         id: true,
         name: true,
         logoUrl: true,
-        location: true,
-        type: true,
+        headquarters: true,
+        companyType: true,
       },
     });
-    return { success: true, companies: companies as CompanyListItem[] };
+    
+    // Map internal DB keys back to UI expected keys
+    const mappedCompanies = companies.map(c => ({
+      id: c.id,
+      name: c.name,
+      logoUrl: c.logoUrl,
+      location: c.headquarters,
+      type: c.companyType,
+    }));
+    
+    return { success: true, companies: mappedCompanies };
   } catch (e) {
     console.error('getAllCompanies error:', e);
     return { success: false, error: 'Failed to load companies' };
@@ -129,9 +151,9 @@ export async function getAllCompanies(
 export async function getCompanyLocations(): Promise<GetCompanyLocationsResult> {
   try {
     const rows = await db.company.groupBy({
-      by: ['location'],
+      by: ['headquarters'],
       where: {
-        location: { not: null },
+        headquarters: { not: null },
       },
       _count: { id: true },
       orderBy: {
@@ -139,9 +161,9 @@ export async function getCompanyLocations(): Promise<GetCompanyLocationsResult> 
       },
     });
     const locations: CompanyLocationCount[] = rows
-      .filter((r) => r.location != null && String(r.location).trim() !== '')
+      .filter((r) => r.headquarters != null && String(r.headquarters).trim() !== '')
       .map((r) => ({
-        location: String(r.location),
+        location: String(r.headquarters),
         count: r._count.id,
       }));
     return { success: true, locations };
@@ -165,10 +187,10 @@ export async function getCompanyProfile(
         name: true,
         description: true,
         website: true,
-        location: true,
+        headquarters: true,
         logoUrl: true,
-        type: true,
-        size: true,
+        companyType: true,
+        companySize: true,
         jobs: {
           where: { status: JobStatus.OPEN },
           orderBy: { createdAt: 'desc' },
@@ -185,9 +207,76 @@ export async function getCompanyProfile(
       },
     });
     if (!company) return { success: false, error: 'Company not found' };
-    return { success: true, company };
+    
+    // Map profile keys to match expected UI structure
+    const mappedProfile = {
+      ...company,
+      location: company.headquarters,
+      type: company.companyType,
+      size: company.companySize,
+    };
+    
+    return { success: true, company: mappedProfile };
   } catch (e) {
     console.error('getCompanyProfile error:', e);
     return { success: false, error: 'Failed to load company' };
+  }
+}
+
+export interface AddCompanyReviewInput {
+  companyId: string;
+  rating: number;
+  reviewerRole: string;
+  employmentStatus: string;
+  pros: string;
+  cons: string;
+}
+
+export async function addCompanyReview(input: AddCompanyReviewInput) {
+  try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== 'USER') {
+      return { error: 'You must be logged in as a candidate to leave a review.' };
+    }
+
+    const company = await db.company.findUnique({
+      where: { id: input.companyId },
+      select: { id: true },
+    });
+
+    if (!company) {
+      return { error: 'Company not found.' };
+    }
+
+    await db.companyReview.create({
+      data: {
+        rating: input.rating,
+        reviewerRole: input.reviewerRole,
+        employmentStatus: input.employmentStatus,
+        pros: input.pros,
+        cons: input.cons,
+        companyId: company.id,
+        authorId: user.id,
+      },
+    });
+
+    // Update the company's average rating dynamically
+    const allReviews = await db.companyReview.aggregate({
+      where: { companyId: company.id },
+      _avg: { rating: true },
+    });
+    
+    if (allReviews._avg.rating) {
+      await db.company.update({
+        where: { id: input.companyId },
+        data: { rating: allReviews._avg.rating },
+      });
+    }
+
+    revalidatePath(`/company/${input.companyId}`);
+    return { success: true };
+  } catch (e) {
+    console.error('addCompanyReview error:', e);
+    return { error: 'Failed to submit review. Please try again later.' };
   }
 }

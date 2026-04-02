@@ -4,11 +4,17 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { updateCompanyProfile } from '@/app/actions/company-profile';
+import { 
+  COMPANY_TYPE_OPTIONS,
+  COMPANY_SIZE_OPTIONS,
+  INDUSTRY_OPTIONS,
+  LOCATION_OPTIONS
+} from '@/lib/constants/company-fields';
+import LocationAutocomplete from '@/components/ui/location-autocomplete';
 
 interface CompanyProfileFormProps {
   company: {
     name: string;
-    accountType: string | null;
     industryType: string | null;
     websiteUrl: string | null;
     address: string | null;
@@ -18,6 +24,9 @@ interface CompanyProfileFormProps {
     gstin: string | null;
     about: string | null;
     foundedYear: string | null;
+    companyType: string | null;
+    companySize: string | null;
+    headquarters: string | null;
   };
   user: {
     designation: string | null;
@@ -28,12 +37,14 @@ export default function CompanyProfileForm({ company, user }: CompanyProfileForm
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    accountType: company.accountType || '',
     industryType: company.industryType || '',
     websiteUrl: company.websiteUrl || '',
     designation: user.designation || '',
     about: company.about || '',
     foundedYear: company.foundedYear || '',
+    companyType: company.companyType || '',
+    companySize: company.companySize || '',
+    headquarters: company.headquarters || '',
     address: company.address || '',
     city: company.city || '',
     state: company.state || '',
@@ -76,32 +87,18 @@ export default function CompanyProfileForm({ company, user }: CompanyProfileForm
 
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
-              Company Type
-            </label>
-            <select
-              value={formData.accountType}
-              onChange={(e) => setFormData({ ...formData, accountType: e.target.value })}
-              className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
-            >
-              <option value="">Select type</option>
-              <option value="Company/business">Company/business</option>
-              <option value="Individual/proprietor">Individual/proprietor</option>
-              <option value="Startup">Startup</option>
-              <option value="MNC">MNC</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
               Industry Type
             </label>
-            <input
-              type="text"
+            <select
               value={formData.industryType}
               onChange={(e) => setFormData({ ...formData, industryType: e.target.value })}
               className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
-              placeholder="e.g., IT Services, Healthcare, Finance"
-            />
+            >
+              <option value="">Select industry</option>
+              {INDUSTRY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -140,6 +137,53 @@ export default function CompanyProfileForm({ company, user }: CompanyProfileForm
               onChange={(e) => setFormData({ ...formData, foundedYear: e.target.value })}
               className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
               placeholder="2020"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Company Structure Type
+              </label>
+              <select
+                value={formData.companyType}
+                onChange={(e) => setFormData({ ...formData, companyType: e.target.value })}
+                className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
+              >
+                <option value="">Select structure type</option>
+                {COMPANY_TYPE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1">
+                Company Size
+              </label>
+              <select
+                value={formData.companySize}
+                onChange={(e) => setFormData({ ...formData, companySize: e.target.value })}
+                className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
+              >
+                <option value="">Select company size</option>
+                {COMPANY_SIZE_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-1">
+              Global Headquarters
+            </label>
+            <LocationAutocomplete
+              value={formData.headquarters}
+              onChange={(value) => setFormData({ ...formData, headquarters: value })}
+              locations={LOCATION_OPTIONS}
+              placeholder="Select headquarters..."
+              allowCustom
             />
           </div>
 

@@ -49,8 +49,8 @@ export async function updateCompany(
         website: data.website?.trim() || null,
         location: data.location.trim(),
         logoUrl: data.logoUrl?.trim() || null,
-        type: data.type,
-        size: data.size?.trim() || null,
+        companyType: data.type,
+        companySize: data.size?.trim() || null,
       },
     });
 
@@ -98,8 +98,8 @@ export async function getTopCompanies(
         id: true,
         name: true,
         logoUrl: true,
-        location: true,
-        type: true,
+        headquarters: true,
+        companyType: true,
         _count: { select: { jobs: { where: { status: 'OPEN' } } } },
       },
       orderBy: {
@@ -114,8 +114,8 @@ export async function getTopCompanies(
         id: c.id,
         name: c.name,
         logoUrl: c.logoUrl,
-        location: c.location,
-        type: c.type,
+        location: c.headquarters,
+        type: c.companyType || 'Company',
         openJobCount: c._count.jobs,
       })),
     };

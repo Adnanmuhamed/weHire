@@ -86,7 +86,9 @@ model User {
   applications   Application[]
   sessions       Session[]
   savedJobs      SavedJob[]
-  reviewsGiven   Review[]      @relation("EmployerReviews")
+  companyReviewsGiven      CompanyReview[]    @relation("UserCompanyReviews")
+  candidateReviewsReceived CandidateReview[]  @relation("CandidateReviewsReceived")
+  candidateReviewsGiven    CandidateReview[]  @relation("EmployerCandidateReviews")
 
   @@index([role])
 }
@@ -149,7 +151,6 @@ model Profile {
   employment   Employment[]
   projects     Project[]
   certificates Certificate[]
-  reviewsReceived Review[]   @relation("CandidateReviews")
 }
 
 model Education {
@@ -237,10 +238,11 @@ model Company {
   location    String?
   logoUrl     String?
   isVerified  Boolean     @default(false)
-  type        CompanyType @default(STARTUP)
+  companyType String?     // e.g. "Private", "Public"
   size        String?
+  companySize String?     // e.g. "1001-5000 employees"
+  headquarters String?    // e.g. "Mumbai, India"
   
-  accountType    String?
   hiringFor      String?
   employeeCount  String?
   industryType   String?
@@ -260,9 +262,11 @@ model Company {
 
   owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   jobs  Job[]
+  companyReviews   CompanyReview[]
+  candidateReviews CandidateReview[]
 
   @@index([name])
-  @@index([type])
+  @@index([companyType])
   @@index([industryType])
 }
 
@@ -351,20 +355,49 @@ model SavedJob {
 }
 
 /* =========================
-   REVIEWS
+   REVIEWS (TWO-WAY SYSTEM)
 ========================= */
 
-model Review {
+// 1. Candidiates / Employees reviewing a Company
+model CompanyReview {
+  id               String   @id @default(cuid())
+  rating           Int
+  pros             String?
+  cons             String?
+  reviewerRole     String?
+  employmentStatus String?
+  
+  companyId String
+  authorId  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  author    User    @relation("UserCompanyReviews", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([authorId])
+}
+
+// 2. Employers reviewing a Candidate
+model CandidateReview {
   id          String   @id @default(cuid())
-  candidateId String
-  employerId  String
   rating      Int
   comment     String
-  createdAt   DateTime @default(now())
+  
+  candidateId String
+  authorId    String
+  companyId   String
 
-  candidate Profile @relation("CandidateReviews", fields: [candidateId], references: [id], onDelete: Cascade)
-  employer  User    @relation("EmployerReviews", fields: [employerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  candidate User    @relation("CandidateReviewsReceived", fields: [candidateId], references: [id], onDelete: Cascade)
+  author    User    @relation("EmployerCandidateReviews", fields: [authorId], references: [id], onDelete: Cascade)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([candidateId])
-  @@index([employerId])
+  @@index([authorId])
+  @@index([companyId])
 }

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getCurrentUser } from '@/lib/auth';
 import { requireEmployer } from '@/lib/rbac';
 import { JobStatus } from '@prisma/client';
-import { ExternalLink, Briefcase } from 'lucide-react';
+import { Briefcase } from 'lucide-react';
 import { db } from '@/lib/db';
 import JobStatusToggle from '@/components/employer/job-status-toggle';
 
@@ -63,17 +63,6 @@ export default async function EmployerDashboardPage() {
                 View, track, and manage all your job postings in one place.
               </p>
             </div>
-            {companyId && (
-              <Link
-                href={`/company/${companyId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
-              >
-                <ExternalLink className="w-4 h-4" />
-                View Public Profile
-              </Link>
-            )}
           </div>
         </div>
 

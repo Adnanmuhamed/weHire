@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Star, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { addReview } from '@/app/actions/employer-application';
+import { submitCandidateReview } from '@/app/actions/employer-application';
 
 interface RateCandidateButtonProps {
   candidateId: string;
@@ -34,7 +34,7 @@ export default function RateCandidateButton({
     }
 
     setLoading(true);
-    const result = await addReview({
+    const result = await submitCandidateReview({
       candidateId,
       rating,
       comment: comment.trim(),

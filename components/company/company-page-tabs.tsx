@@ -7,9 +7,6 @@ import { MapPin, Briefcase, Clock } from 'lucide-react';
 interface CompanyPageTabsProps {
   company: {
     about: string | null;
-    accountType: string | null;
-    employeeCount: string | null;
-    foundedYear: string | null;
     websiteUrl: string | null;
   };
   jobs: Array<{

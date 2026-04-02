@@ -22,6 +22,8 @@ interface LocationAutocompleteProps {
   name?: string;
   /** If true, allow free-text that isn't in the list */
   allowCustom?: boolean;
+  /** Optional custom locations array, defaults to MIDDLE_EAST_LOCATIONS */
+  locations?: readonly string[];
 }
 
 export default function LocationAutocomplete({
@@ -33,6 +35,7 @@ export default function LocationAutocomplete({
   id,
   name,
   allowCustom = false,
+  locations = MIDDLE_EAST_LOCATIONS,
 }: LocationAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
@@ -46,7 +49,7 @@ export default function LocationAutocomplete({
     setInputValue(value);
   }, [value]);
 
-  const filtered = MIDDLE_EAST_LOCATIONS.filter((loc) =>
+  const filtered = locations.filter((loc) =>
     loc.toLowerCase().includes(inputValue.toLowerCase())
   );
 
@@ -69,7 +72,7 @@ export default function LocationAutocomplete({
       ) {
         setIsOpen(false);
         // If the user typed something that isn't in the list, either keep it (allowCustom) or revert
-        if (!allowCustom && !MIDDLE_EAST_LOCATIONS.includes(inputValue as any)) {
+        if (!allowCustom && !locations.includes(inputValue)) {
           setInputValue(value);
         } else if (allowCustom && inputValue !== value && inputValue.trim().length > 0) {
           onChange(inputValue);
@@ -78,7 +81,7 @@ export default function LocationAutocomplete({
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [allowCustom, inputValue, onChange, value]);
+  }, [allowCustom, inputValue, onChange, value, locations]);
 
   // Scroll highlighted item into view
   useEffect(() => {

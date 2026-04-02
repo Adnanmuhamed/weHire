@@ -26,11 +26,11 @@ export const dynamic = 'force-dynamic';
  */
 async function logoutAction() {
   'use server';
-  
+
   try {
     // Get session token from cookies
     const sessionToken = await getSessionToken();
-    
+
     // Delete session from database if it exists
     if (sessionToken) {
       await deleteSession(sessionToken);
@@ -38,14 +38,14 @@ async function logoutAction() {
   } catch (error) {
     // Ignore errors - we'll still clear the cookie
   }
-  
+
   // Always clear the cookie, even if session deletion failed
   try {
     await clearSessionCookie();
   } catch (error) {
     // Ignore cookie clearing errors
   }
-  
+
   // Redirect to home page after logout
   redirect('/');
 }

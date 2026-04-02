@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { Star, Globe, Users, Calendar, Building2 } from 'lucide-react';
 import CompanyPageTabs from '@/components/company/company-page-tabs';
+import CompanyReviewsSheet from '@/components/company/company-reviews-sheet';
 
 interface PageProps {
   params: Promise<{ companyId: string }>;
@@ -29,12 +30,30 @@ export default async function CompanyPage({ params }: PageProps) {
           createdAt: true,
         },
       },
+      companyReviews: {
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: {
+            select: { email: true }
+          }
+        }
+      },
     },
   });
 
   if (!company) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8 text-center space-y-4">
+        <Building2 className="w-16 h-16 text-foreground/20 mx-auto" />
+        <h2 className="text-2xl font-bold text-foreground">Company not found</h2>
+        <p className="text-foreground/60 max-w-md">
+          The company profile you are looking for does not exist or may have been removed.
+        </p>
+      </div>
+    );
   }
+
+  const reviews = company.companyReviews || [];
 
   const similarCompanies = company.industryType
     ? await db.company.findMany({
@@ -79,20 +98,26 @@ export default async function CompanyPage({ params }: PageProps) {
                 <div className="flex-1 min-w-0">
                   <h1 className="text-2xl font-bold text-foreground mb-2">{company.name}</h1>
                   <div className="flex flex-wrap items-center gap-3 text-sm">
-                    {company.rating !== null && company.rating > 0 && (
-                      <div className="flex items-center gap-1 text-foreground/80">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="font-medium">{company.rating.toFixed(1)}</span>
-                      </div>
-                    )}
+                    <CompanyReviewsSheet
+                      companyId={company.id}
+                      companyName={company.name}
+                      ratingCount={reviews.length}
+                      averageRating={company.rating}
+                      reviews={reviews.map(r => ({
+                        ...r,
+                        reviewerRole: r.reviewerRole ?? 'Anonymous',
+                        comment: '', // Legacy placeholder
+                        authorEmail: r.author.email
+                      })) as any}
+                    />
                     {company.industryType && (
                       <span className="px-2 py-1 bg-foreground/10 rounded text-foreground/80">
                         {company.industryType}
                       </span>
                     )}
-                    {company.type && (
+                    {company.companyType && (
                       <span className="px-2 py-1 bg-foreground/10 rounded text-foreground/80">
-                        {company.type}
+                        {company.companyType}
                       </span>
                     )}
                   </div>
@@ -104,9 +129,6 @@ export default async function CompanyPage({ params }: PageProps) {
             <CompanyPageTabs
               company={{
                 about: company.about,
-                accountType: company.accountType,
-                employeeCount: company.employeeCount,
-                foundedYear: company.foundedYear,
                 websiteUrl: company.websiteUrl,
               }}
               jobs={company.jobs as any}
@@ -119,21 +141,12 @@ export default async function CompanyPage({ params }: PageProps) {
             <div className="bg-background border border-foreground/10 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4">More Information</h3>
               <div className="space-y-3">
-                {company.accountType && (
+                {company.companyType && (
                   <div className="flex items-start gap-3">
                     <Building2 className="w-5 h-5 text-foreground/60 mt-0.5" />
                     <div>
                       <p className="text-sm text-foreground/60">Type</p>
-                      <p className="text-foreground">{company.accountType}</p>
-                    </div>
-                  </div>
-                )}
-                {company.employeeCount && (
-                  <div className="flex items-start gap-3">
-                    <Users className="w-5 h-5 text-foreground/60 mt-0.5" />
-                    <div>
-                      <p className="text-sm text-foreground/60">Size</p>
-                      <p className="text-foreground">{company.employeeCount} employees</p>
+                      <p className="text-foreground">{company.companyType}</p>
                     </div>
                   </div>
                 )}
@@ -143,6 +156,24 @@ export default async function CompanyPage({ params }: PageProps) {
                     <div>
                       <p className="text-sm text-foreground/60">Founded</p>
                       <p className="text-foreground">{company.foundedYear}</p>
+                    </div>
+                  </div>
+                )}
+                {company.companySize && (
+                  <div className="flex items-start gap-3">
+                    <Users className="w-5 h-5 text-foreground/60 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-foreground/60">Company Size</p>
+                      <p className="text-foreground">{company.companySize}</p>
+                    </div>
+                  </div>
+                )}
+                {company.headquarters && (
+                  <div className="flex items-start gap-3">
+                    <Globe className="w-5 h-5 text-foreground/60 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-foreground/60">Headquarters</p>
+                      <p className="text-foreground">{company.headquarters}</p>
                     </div>
                   </div>
                 )}
