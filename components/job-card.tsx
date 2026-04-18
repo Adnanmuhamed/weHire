@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { JobType } from '@prisma/client';
 import { Bookmark } from 'lucide-react';
 import { toggleSavedJobAction } from '@/app/actions/saved-job';
@@ -70,6 +71,7 @@ export default function JobCard({
 }: JobCardProps) {
   const [saved, setSaved] = useState(isSaved);
   const [isToggling, setIsToggling] = useState(false);
+  const router = useRouter();
 
   const handleBookmarkClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -91,7 +93,10 @@ export default function JobCard({
   };
 
   return (
-    <div className="relative p-6 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-md transition-all">
+    <div 
+      onClick={() => router.push(`/jobs/${jobId}`)}
+      className="relative p-6 border border-foreground/10 rounded-lg bg-background hover:border-foreground/20 hover:shadow-md transition-all cursor-pointer"
+    >
       {/* Bookmark Button */}
       <button
         onClick={handleBookmarkClick}
@@ -108,9 +113,8 @@ export default function JobCard({
         />
       </button>
 
-      <Link href={`/jobs/${jobId}`}>
-        <article>
-          <div className="flex flex-col space-y-4">
+      <article>
+        <div className="flex flex-col space-y-4">
             {/* Header */}
             <div className="pr-10">
               <h3 className="text-xl font-semibold text-foreground mb-1 hover:underline">
@@ -194,7 +198,6 @@ export default function JobCard({
           </div>
         </div>
       </article>
-      </Link>
     </div>
   );
 }

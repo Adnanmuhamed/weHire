@@ -219,7 +219,7 @@ export default function EducationSection({ education, readOnly = false }: Educat
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={form.isFullTime}
+                    checked={form.isFullTime ?? false}
                     onChange={(e) => setForm((f) => ({ ...f, isFullTime: e.target.checked }))}
                     className="rounded border-foreground/20"
                   />

@@ -74,7 +74,7 @@ export default function UserProfileDropdown({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-foreground/10 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition-colors"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -83,14 +83,14 @@ export default function UserProfileDropdown({
           <img
             src={avatarUrl}
             alt={userName || userEmail}
-            className="w-8 h-8 rounded-full object-cover"
+            className="w-8 h-8 rounded-full object-cover ring-2 ring-white/30"
           />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-foreground/20 flex items-center justify-center text-sm font-medium text-foreground">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-medium text-white">
             {initials}
           </div>
         )}
-        <ChevronDown className="w-4 h-4 text-foreground/70" />
+        <ChevronDown className="w-4 h-4 text-white/70" />
       </button>
 
       {/* Dropdown Menu */}

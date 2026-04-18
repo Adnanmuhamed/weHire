@@ -215,7 +215,7 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
                       onChange={(e) =>
                         setForm((f) => ({ ...f, endYear: e.target.value ? parseInt(e.target.value, 10) : undefined }))
                       }
-                      disabled={form.isCurrent}
+                      disabled={form.isCurrent ?? false}
                       className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground disabled:opacity-50"
                     />
                   </div>
@@ -223,7 +223,7 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
                 <label className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    checked={form.isCurrent}
+                    checked={form.isCurrent ?? false}
                     onChange={(e) => setForm((f) => ({ ...f, isCurrent: e.target.checked }))}
                     className="rounded border-foreground/20"
                   />

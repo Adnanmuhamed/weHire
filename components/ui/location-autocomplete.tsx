@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MIDDLE_EAST_LOCATIONS } from '@/lib/constants/locations';
+import { LOCATION_OPTIONS } from '@/lib/constants/company-fields';
 import { ChevronDown, X, MapPin } from 'lucide-react';
 
 /**
@@ -13,8 +13,9 @@ import { ChevronDown, X, MapPin } from 'lucide-react';
  */
 
 interface LocationAutocompleteProps {
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
@@ -22,12 +23,13 @@ interface LocationAutocompleteProps {
   name?: string;
   /** If true, allow free-text that isn't in the list */
   allowCustom?: boolean;
-  /** Optional custom locations array, defaults to MIDDLE_EAST_LOCATIONS */
+  /** Optional custom locations array, defaults to LOCATION_OPTIONS */
   locations?: readonly string[];
 }
 
 export default function LocationAutocomplete({
   value,
+  defaultValue = '',
   onChange,
   placeholder = 'Select a city…',
   disabled = false,
@@ -35,10 +37,11 @@ export default function LocationAutocomplete({
   id,
   name,
   allowCustom = false,
-  locations = MIDDLE_EAST_LOCATIONS,
+  locations = LOCATION_OPTIONS,
 }: LocationAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
+  const initialValue = value !== undefined ? value : defaultValue;
+  const [inputValue, setInputValue] = useState(initialValue);
   const [highlightIdx, setHighlightIdx] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +49,9 @@ export default function LocationAutocomplete({
 
   // Sync external value → internal
   useEffect(() => {
-    setInputValue(value);
+    if (value !== undefined) {
+      setInputValue(value);
+    }
   }, [value]);
 
   const filtered = locations.filter((loc) =>
@@ -56,7 +61,7 @@ export default function LocationAutocomplete({
   const select = useCallback(
     (loc: string) => {
       setInputValue(loc);
-      onChange(loc);
+      if (onChange) onChange(loc);
       setIsOpen(false);
       setHighlightIdx(-1);
     },
@@ -73,9 +78,9 @@ export default function LocationAutocomplete({
         setIsOpen(false);
         // If the user typed something that isn't in the list, either keep it (allowCustom) or revert
         if (!allowCustom && !locations.includes(inputValue)) {
-          setInputValue(value);
-        } else if (allowCustom && inputValue !== value && inputValue.trim().length > 0) {
-          onChange(inputValue);
+          setInputValue(value !== undefined ? value : defaultValue);
+        } else if (allowCustom && inputValue !== (value !== undefined ? value : defaultValue) && inputValue.trim().length > 0) {
+          if (onChange) onChange(inputValue);
         }
       }
     };
@@ -118,7 +123,7 @@ export default function LocationAutocomplete({
         if (highlightIdx >= 0 && filtered[highlightIdx]) {
           select(filtered[highlightIdx]);
         } else if (allowCustom) {
-          onChange(inputValue);
+          if (onChange) onChange(inputValue);
           setIsOpen(false);
         }
         break;
@@ -135,11 +140,15 @@ export default function LocationAutocomplete({
     setInputValue(val);
     setHighlightIdx(-1);
     if (!isOpen) setIsOpen(true);
+    // Note: To make it work uncontrolled perfectly as typing, we can optimistically call onChange
+    if (allowCustom && onChange) {
+      onChange(val);
+    }
   };
 
   const clearValue = () => {
     setInputValue('');
-    onChange('');
+    if (onChange) onChange('');
     inputRef.current?.focus();
     setIsOpen(true);
   };
@@ -203,11 +212,11 @@ export default function LocationAutocomplete({
               <li
                 key={loc}
                 role="option"
-                aria-selected={loc === value}
+                aria-selected={loc === (value !== undefined ? value : inputValue)}
                 className={`px-3 py-2 text-sm cursor-pointer transition-colors ${
                   idx === highlightIdx
                     ? 'bg-foreground/10 text-foreground'
-                    : loc === value
+                    : loc === (value !== undefined ? value : inputValue)
                       ? 'bg-foreground/5 text-foreground font-medium'
                       : 'text-foreground/80 hover:bg-foreground/5'
                 }`}

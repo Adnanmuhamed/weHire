@@ -110,14 +110,14 @@ export default function EditJobPage({ params }: EditJobPageProps) {
       title: formData.title,
       description: formData.description,
       location: formData.location,
-      jobType: formData.jobType,
-      workMode: formData.workMode,
+      jobType: formData.jobType as any,
+      workMode: formData.workMode as any,
       industryType: formData.industryType || undefined,
       department: formData.department || undefined,
       jobRole: formData.jobRole === 'Others' && formData.customJobRole
         ? formData.customJobRole
         : formData.jobRole || undefined,
-      qualification: formData.qualification || undefined,
+      qualification: (formData.qualification || undefined) as any,
       degreeRequired: formData.degreeRequired || undefined,
       skillsRequired: formData.skillsRequired,
       languagesKnown: formData.languagesKnown,

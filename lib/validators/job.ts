@@ -130,3 +130,28 @@ export const CreateJobSchema = z
   });
 
 export type CreateJobInput = z.infer<typeof CreateJobSchema>;
+
+export const UpdateJobSchema = CreateJobSchema.innerType().extend({
+  status: z.enum(['DRAFT', 'OPEN', 'PAUSED', 'CLOSED']).optional().nullable(),
+}).superRefine((data, ctx) => {
+  // Re-apply refinement
+  if (data.salaryMin != null && data.salaryMax != null) {
+    if (data.salaryMax < data.salaryMin) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Salary maximum must be ≥ salary minimum',
+        path: ['salaryMax'],
+      });
+    }
+  }
+  if (data.minExperience != null && data.maxExperience != null) {
+    if (data.maxExperience < data.minExperience) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Max experience must be ≥ min experience',
+        path: ['maxExperience'],
+      });
+    }
+  }
+});
+export type UpdateJobInput = z.infer<typeof UpdateJobSchema>;

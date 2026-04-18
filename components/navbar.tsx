@@ -8,167 +8,139 @@ import { clearSessionCookie } from '@/lib/cookies';
 import { db } from '@/lib/db';
 import UserProfileDropdown from './user-profile-dropdown';
 import EmployerDropdown from './employer-dropdown';
+import NavbarMobileMenu from './navbar-mobile-menu';
 
 /**
  * Navigation Bar Component
- * 
- * Server Component that displays navigation based on authentication state.
- * Responsive top navigation bar with role-based links.
- * Sticky on scroll, minimal but polished styling.
- * 
- * Force dynamic to ensure auth state is always fresh after logout.
+ *
+ * Server Component — auth state is resolved on the server, role-based links
+ * are rendered conditionally. Mobile toggle is handled by NavbarMobileMenu
+ * (a small Client Component that only owns the open/close state).
  */
 export const dynamic = 'force-dynamic';
 
-/**
- * Server Action for logout
- * Directly clears session using server-side utilities (no HTTP call needed)
- */
 async function logoutAction() {
   'use server';
 
   try {
-    // Get session token from cookies
     const sessionToken = await getSessionToken();
-
-    // Delete session from database if it exists
     if (sessionToken) {
       await deleteSession(sessionToken);
     }
-  } catch (error) {
-    // Ignore errors - we'll still clear the cookie
-  }
+  } catch { }
 
-  // Always clear the cookie, even if session deletion failed
   try {
     await clearSessionCookie();
-  } catch (error) {
-    // Ignore cookie clearing errors
-  }
+  } catch { }
 
-  // Redirect to home page after logout
   redirect('/');
 }
+
+const navLinkCls =
+  'px-3 py-2 text-sm font-semibold text-white/80 hover:text-white transition-colors rounded-md hover:bg-white/10';
 
 export default async function Navbar() {
   const user = await getCurrentUser();
 
-  // Fetch user profile for dropdown if user exists
   let profile = null;
   if (user) {
     try {
       profile = await db.profile.findUnique({
         where: { userId: user.id },
-        select: {
-          fullName: true,
-          avatarUrl: true,
-        },
+        select: { fullName: true, avatarUrl: true },
       });
-    } catch (error) {
-      // Ignore errors - profile is optional
-    }
+    } catch { }
   }
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-foreground/10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 w-full bg-black border-b border-white/10">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         <div className="flex h-16 items-center justify-between">
-          {/* Left side: Logo */}
+
+          {/* ── Left: Logo ── */}
           <Link
             href={user?.role === Role.EMPLOYER ? '/employer' : '/'}
-            className="text-xl font-bold text-foreground hover:opacity-80 transition-opacity"
+            className="text-xl font-bold text-white hover:text-white/80 transition-colors shrink-0"
           >
             JobPortal
           </Link>
 
-          {/* Right side: Auth buttons or user menu */}
-          <div className="flex items-center gap-4">
-            {user ? (
-              <>
-                {/* Role-based navigation links */}
-                {user.role === Role.USER && (
-                  <>
-                    <Link
-                      href="/jobs"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      Jobs
-                    </Link>
-                    <Link
-                      href="/companies"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
-                      Companies
-                    </Link>
-                  </>
-                )}
+          {/* ── Center: unauthenticated public links (desktop only) ── */}
+          {!user && (
+            <div className="hidden md:flex items-center gap-1">
+              <Link href="/jobs" className={navLinkCls}>Find Jobs</Link>
+              <Link href="/companies" className={navLinkCls}>Companies</Link>
+            </div>
+          )}
+
+          {/* ── Right: role-based links + avatar (desktop) / hamburger (mobile) ── */}
+          <div className="flex items-center gap-2">
+
+            {/* Desktop right-side links — hidden on mobile (mobile menu handles them) */}
+            {user && (
+              <div className="hidden md:flex items-center gap-2">
                 {user.role === Role.EMPLOYER && (
                   <>
-                    <Link
-                      href="/employer"
-                      className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                    >
+                    <Link href="/employer" className={navLinkCls}>
                       Manage Jobs
                     </Link>
                     <Link
                       href="/employer/jobs/new"
-                      className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity"
+                      className="px-4 py-2 text-sm font-semibold bg-white text-black rounded-md hover:bg-white/90 transition-colors"
                     >
                       Post a Job
                     </Link>
                   </>
                 )}
-                {user.role === Role.ADMIN && (
-                  <Link
-                    href="/admin"
-                    className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                  >
-                    Admin
-                  </Link>
+                {user.role === Role.USER && (
+                  <>
+                    <Link href="/jobs" className={navLinkCls}>Jobs</Link>
+                    <Link href="/companies" className={navLinkCls}>Companies</Link>
+                  </>
                 )}
+                {user.role === Role.ADMIN && (
+                  <Link href="/admin" className={navLinkCls}>Admin</Link>
+                )}
+              </div>
+            )}
 
-                {/* User Profile Dropdown */}
-                <UserProfileDropdown
-                  userEmail={user.email}
-                  userName={profile?.fullName || null}
-                  avatarUrl={profile?.avatarUrl || null}
-                  userRole={user.role}
-                  logoutAction={logoutAction}
-                />
-              </>
+            {/* Auth actions (desktop) */}
+            {user ? (
+              /* Avatar — always rightmost */
+              <UserProfileDropdown
+                userEmail={user.email}
+                userName={profile?.fullName || null}
+                avatarUrl={profile?.avatarUrl || null}
+                userRole={user.role}
+                logoutAction={logoutAction}
+              />
             ) : (
-              <>
-                <Link
-                  href="/jobs"
-                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                >
-                  Find Jobs
-                </Link>
-                <Link
-                  href="/companies"
-                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
-                >
-                  Companies
-                </Link>
+              <div className="hidden md:flex items-center gap-2">
                 <EmployerDropdown />
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity"
+                  className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-md hover:bg-white/10"
                 >
                   Login
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 transition-opacity"
+                  className="px-4 py-2 text-sm font-medium bg-white text-black rounded-md hover:bg-white/90 transition-colors"
                 >
                   Sign Up
                 </Link>
-              </>
+              </div>
             )}
+
+            {/* Mobile hamburger — passes serialisable props to Client Component */}
+            <NavbarMobileMenu
+              userRole={user?.role ?? null}
+              isAuthenticated={!!user}
+            />
           </div>
+
         </div>
       </div>
     </nav>
   );
 }
-

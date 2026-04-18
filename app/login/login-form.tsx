@@ -34,24 +34,23 @@ export default function LoginForm({ redirectParam, roleParam }: LoginFormProps) 
         email,
         password,
         expectedRole: isEmployerPortal ? 'EMPLOYER' : undefined,
+        redirectTo: redirectParam || undefined,
       });
 
-      if (!result.success || result.error) {
-        setError(result.error || 'Login failed. Please try again.');
-        setIsLoading(false);
-        return;
+      // If the server action returns at all, it means authentication failed —
+      // successful logins call redirect() server-side and never return a value.
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        // No error returned but also no redirect — unexpected; surface generic msg
+        setError('Login failed. Please try again.');
       }
+      setIsLoading(false);
+    } catch (err: any) {
+      // Next.js redirect() internally throws a NEXT_REDIRECT error.
+      // If that's what we caught, the redirect is already in flight — do nothing.
+      if (err?.digest?.startsWith('NEXT_REDIRECT')) return;
 
-      let destination = '/';
-      if (redirectParam) {
-        destination = redirectParam;
-      } else if (result.role === 'RECRUITER') {
-        destination = '/employer';
-      } else if (result.role === 'ADMIN') {
-        destination = '/admin';
-      }
-      window.location.href = destination;
-    } catch (err) {
       console.error(err);
       setError('Login failed. Please try again.');
       setIsLoading(false);

@@ -5,21 +5,10 @@ import { getCurrentUser } from '@/lib/auth';
 import { Role } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
-export interface UpdateCompanyProfileInput {
-  industryType?: string;
-  websiteUrl?: string;
-  designation?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-  gstin?: string;
-  about?: string;
-  foundedYear?: string;
-  companyType?: string;
-  companySize?: string;
-  headquarters?: string;
-}
+import { UpdateCompanyProfileSchema } from '@/lib/validators/company-profile';
+import type { z } from 'zod';
+
+export type UpdateCompanyProfileInput = z.infer<typeof UpdateCompanyProfileSchema>;
 
 export interface UpdateCompanyProfileResult {
   success?: boolean;
@@ -27,9 +16,15 @@ export interface UpdateCompanyProfileResult {
 }
 
 export async function updateCompanyProfile(
-  data: UpdateCompanyProfileInput
+  input: UpdateCompanyProfileInput
 ): Promise<UpdateCompanyProfileResult> {
   try {
+    const parsed = UpdateCompanyProfileSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid company profile data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     if (user.role !== Role.EMPLOYER) {

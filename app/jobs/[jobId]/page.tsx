@@ -53,14 +53,47 @@ export default async function JobDetailsPage({ params }: PageProps) {
   const { jobId } = await params;
   const user = await getCurrentUser();
 
-  // Fetch job details using server action
-  const result = await getJobById(jobId);
+  // Fetch job details including ownerId to check access
+  const rawJob = await db.job.findUnique({
+    where: { id: jobId },
+    select: {
+      id: true,
+      title: true,
+      description: true,
+      location: true,
+      jobType: true,
+      workMode: true,
+      degree: true,
+      salaryMin: true,
+      salaryMax: true,
+      minExperience: true,
+      maxExperience: true,
+      createdAt: true,
+      status: true,
+      company: {
+        select: {
+          id: true,
+          name: true,
+          logoUrl: true,
+          website: true,
+          location: true,
+          ownerId: true,
+        },
+      },
+    },
+  });
   
-  if (!result.success || !result.job) {
+  if (!rawJob) {
     notFound();
   }
 
-  const job = result.job;
+  // Allow access if job is OPEN, OR if current user is the owner
+  const isOwner = user?.id === rawJob.company.ownerId;
+  if (rawJob.status !== 'OPEN' && !isOwner) {
+    notFound();
+  }
+
+  const { status, ...job } = rawJob;
 
   // Check if user has already applied (only for seekers)
   let hasApplied = false;

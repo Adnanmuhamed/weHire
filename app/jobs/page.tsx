@@ -63,23 +63,34 @@ function buildFilters(
     return Array.isArray(v) ? v : [v];
   };
   const query = get('query')?.trim() || get('search')?.trim();
-  const location = get('loc')?.trim() || get('location')?.trim();
+  
+  // Location can be 'loc' or 'location', we get all and merge
+  const locationRaw = [...getAll('loc'), ...getAll('location')];
+  const location = locationRaw.filter(Boolean).map(v => v.trim());
+  
   const expRaw = get('exp');
   const expNum =
     expRaw !== undefined && expRaw !== ''
       ? Math.max(0, parseInt(expRaw, 10))
       : NaN;
   const experience = Number.isNaN(expNum) ? undefined : expNum;
+  
   const workMode = getAll('workMode').filter((v): v is WorkMode =>
     ['REMOTE', 'HYBRID', 'ONSITE'].includes(v)
   );
   const jobType = getAll('jobType').filter((v): v is JobType =>
     ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN', 'REMOTE'].includes(v)
   );
+  
   const degree = get('degree')?.trim();
   const companyId = get('companyId')?.trim();
-  const industry = get('industry')?.trim();
-  const department = get('department')?.trim();
+  
+  const industry = getAll('industry').filter(Boolean).map(v => v.trim());
+  const department = getAll('department').filter(Boolean).map(v => v.trim());
+  
+  const qualification = getAll('qualification').filter(Boolean).map(v => v.trim());
+  const languages = getAll('languages').filter(Boolean).map(v => v.trim());
+  
   const salaryPreset = get('salary');
 
   let salaryMin: number | undefined;
@@ -97,15 +108,17 @@ function buildFilters(
 
   const filters: PublicJobFilters = {};
   if (query) filters.search = query;
-  if (location) filters.location = location;
+  if (location.length > 0) filters.location = location;
   if (experience !== undefined && !Number.isNaN(experience))
     filters.maxExperience = experience;
-  if (workMode.length) filters.workMode = workMode;
-  if (jobType.length) filters.jobType = jobType;
+  if (workMode.length > 0) filters.workMode = workMode;
+  if (jobType.length > 0) filters.jobType = jobType;
   if (degree) filters.degree = degree;
   if (companyId) filters.companyId = companyId;
-  if (industry) filters.industryType = industry;
-  if (department) filters.department = department;
+  if (industry.length > 0) filters.industryType = industry;
+  if (department.length > 0) filters.department = department;
+  if (qualification.length > 0) filters.qualification = qualification;
+  if (languages.length > 0) filters.languages = languages;
   if (salaryMin !== undefined) filters.salaryMin = salaryMin;
   if (salaryMax !== undefined) filters.salaryMax = salaryMax;
 

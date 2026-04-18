@@ -223,6 +223,19 @@ export async function submitCandidateReview(
       return { error: 'You can only review candidates who applied to your jobs' };
     }
 
+    const existingReview = await db.candidateReview.findUnique({
+      where: {
+        authorId_candidateId: {
+          authorId: user.id,
+          candidateId: profile.userId,
+        },
+      },
+    });
+
+    if (existingReview) {
+      return { error: 'You have already submitted a review for this candidate.' };
+    }
+
     const review = await db.candidateReview.create({
       data: {
         candidateId: profile.userId,

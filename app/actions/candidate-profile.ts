@@ -5,16 +5,15 @@ import { getCurrentUser } from '@/lib/auth';
 import { requireUser } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 
+import { 
+  AddEducationSchema, AddEmploymentSchema, UpdateHeaderDetailsSchema, 
+  UpdatePersonalDetailsSchema, AddProjectSchema, AddCertificateSchema 
+} from '@/lib/validators/candidate';
+import type { z } from 'zod';
+
 /* ========== Education ========== */
 
-export interface AddEducationInput {
-  degree: string;
-  college: string;
-  stream?: string;
-  startYear?: number;
-  endYear?: number;
-  isFullTime?: boolean;
-}
+export type AddEducationInput = z.infer<typeof AddEducationSchema>;
 
 export interface AddEducationResult {
   success?: boolean;
@@ -23,9 +22,15 @@ export interface AddEducationResult {
 }
 
 export async function addEducation(
-  data: AddEducationInput
+  input: AddEducationInput
 ): Promise<AddEducationResult> {
   try {
+    const parsed = AddEducationSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid education data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
@@ -90,15 +95,7 @@ export async function deleteEducation(
 
 /* ========== Employment ========== */
 
-export interface AddEmploymentInput {
-  designation: string;
-  company: string;
-  location?: string;
-  startYear?: number;
-  endYear?: number;
-  isCurrent?: boolean;
-  description?: string;
-}
+export type AddEmploymentInput = z.infer<typeof AddEmploymentSchema>;
 
 export interface AddEmploymentResult {
   success?: boolean;
@@ -107,9 +104,15 @@ export interface AddEmploymentResult {
 }
 
 export async function addEmployment(
-  data: AddEmploymentInput
+  input: AddEmploymentInput
 ): Promise<AddEmploymentResult> {
   try {
+    const parsed = AddEmploymentSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid employment data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
@@ -175,17 +178,7 @@ export async function deleteEmployment(
 
 /* ========== Header details (name, contact, social) ========== */
 
-export interface UpdateHeaderDetailsInput {
-  fullName?: string | null;
-  mobile?: string | null;
-  email?: string | null;
-  location?: string | null;
-  currentLocation?: string | null;
-  availability?: string | null;
-  linkedinUrl?: string | null;
-  githubUrl?: string | null;
-  portfolioUrl?: string | null;
-}
+export type UpdateHeaderDetailsInput = z.infer<typeof UpdateHeaderDetailsSchema>;
 
 export interface UpdateHeaderDetailsResult {
   success?: boolean;
@@ -193,9 +186,15 @@ export interface UpdateHeaderDetailsResult {
 }
 
 export async function updateHeaderDetails(
-  data: UpdateHeaderDetailsInput
+  input: UpdateHeaderDetailsInput
 ): Promise<UpdateHeaderDetailsResult> {
   try {
+    const parsed = UpdateHeaderDetailsSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid header details data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
@@ -263,14 +262,7 @@ export async function updateResume(url: string | null): Promise<UpdateResumeResu
 
 /* ========== Projects ========== */
 
-export interface AddProjectInput {
-  title: string;
-  description?: string | null;
-  role?: string | null;
-  projectLink?: string | null;
-  startDate?: string | null; // ISO date
-  endDate?: string | null;
-}
+export type AddProjectInput = z.infer<typeof AddProjectSchema>;
 
 export interface AddProjectResult {
   success?: boolean;
@@ -278,8 +270,14 @@ export interface AddProjectResult {
   id?: string;
 }
 
-export async function addProject(data: AddProjectInput): Promise<AddProjectResult> {
+export async function addProject(input: AddProjectInput): Promise<AddProjectResult> {
   try {
+    const parsed = AddProjectSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid project data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
@@ -345,12 +343,7 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
 
 /* ========== Certificates ========== */
 
-export interface AddCertificateInput {
-  name: string;
-  issuer?: string | null;
-  issueDate?: string | null; // ISO date
-  url?: string | null;
-}
+export type AddCertificateInput = z.infer<typeof AddCertificateSchema>;
 
 export interface AddCertificateResult {
   success?: boolean;
@@ -358,8 +351,14 @@ export interface AddCertificateResult {
   id?: string;
 }
 
-export async function addCertificate(data: AddCertificateInput): Promise<AddCertificateResult> {
+export async function addCertificate(input: AddCertificateInput): Promise<AddCertificateResult> {
   try {
+    const parsed = AddCertificateSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid certificate data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);
@@ -422,18 +421,7 @@ export async function deleteCertificate(id: string): Promise<DeleteCertificateRe
 
 /* ========== Personal details ========== */
 
-export interface UpdatePersonalDetailsInput {
-  dob?: string | null; // ISO date string
-  gender?: string | null;
-  maritalStatus?: string | null;
-  availability?: string | null;
-  resumeHeadline?: string | null;
-  profileSummary?: string | null;
-  currentLocation?: string | null;
-  languages?: string[];
-  careerBreak?: boolean;
-  differentlyAbled?: boolean;
-}
+export type UpdatePersonalDetailsInput = z.infer<typeof UpdatePersonalDetailsSchema>;
 
 export interface UpdatePersonalDetailsResult {
   success?: boolean;
@@ -441,9 +429,15 @@ export interface UpdatePersonalDetailsResult {
 }
 
 export async function updatePersonalDetails(
-  data: UpdatePersonalDetailsInput
+  input: UpdatePersonalDetailsInput
 ): Promise<UpdatePersonalDetailsResult> {
   try {
+    const parsed = UpdatePersonalDetailsSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid personal details data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     requireUser(user);

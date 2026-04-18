@@ -9,6 +9,7 @@ import {
   JobSeekerSignUpInput,
 } from '@/lib/validators';
 import { Role, WorkStatus } from '@prisma/client';
+import { redirect } from 'next/navigation';
 
 export interface RegisterUserResult {
   success?: boolean;
@@ -86,11 +87,10 @@ export interface LoginUserInput {
 export interface LoginUserResult {
   success?: boolean;
   error?: string;
-  role?: 'CANDIDATE' | 'RECRUITER' | 'ADMIN';
 }
 
 export async function loginUser(
-  input: LoginUserInput
+  input: LoginUserInput & { redirectTo?: string }
 ): Promise<LoginUserResult> {
   const email = input.email.trim().toLowerCase();
   const password = input.password;
@@ -140,17 +140,16 @@ export async function loginUser(
   const sessionToken = await createSession(user.id);
   await setSessionCookie(sessionToken);
 
-  let role: LoginUserResult['role'] = 'CANDIDATE';
-  if (user.role === Role.EMPLOYER) {
-    role = 'RECRUITER';
+  // Server-side redirect — no client round-trip, eliminates the UI flash
+  if (input.redirectTo) {
+    redirect(input.redirectTo);
+  } else if (user.role === Role.EMPLOYER) {
+    redirect('/employer');
   } else if (user.role === Role.ADMIN) {
-    role = 'ADMIN';
+    redirect('/admin');
+  } else {
+    redirect('/dashboard');
   }
-
-  return {
-    success: true,
-    role,
-  };
 }
 
 

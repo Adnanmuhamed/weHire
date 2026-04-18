@@ -248,6 +248,19 @@ export async function addCompanyReview(input: AddCompanyReviewInput) {
       return { error: 'Company not found.' };
     }
 
+    const existingReview = await db.companyReview.findUnique({
+      where: {
+        authorId_companyId: {
+          authorId: user.id,
+          companyId: company.id,
+        },
+      },
+    });
+
+    if (existingReview) {
+      return { error: 'You have already submitted a review for this company.' };
+    }
+
     await db.companyReview.create({
       data: {
         rating: input.rating,

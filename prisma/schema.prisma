@@ -378,6 +378,7 @@ model CompanyReview {
 
   @@index([companyId])
   @@index([authorId])
+  @@unique([authorId, companyId])
 }
 
 // 2. Employers reviewing a Candidate
@@ -400,4 +401,5 @@ model CandidateReview {
   @@index([candidateId])
   @@index([authorId])
   @@index([companyId])
+  @@unique([authorId, candidateId])
 }

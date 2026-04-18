@@ -26,7 +26,7 @@ export default function EmployerDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-2 text-sm font-medium text-foreground hover:opacity-80 transition-opacity inline-flex items-center gap-1"
+        className="px-4 py-2 text-sm font-medium text-white hover:text-white/80 transition-opacity inline-flex items-center gap-1"
       >
         For Employers
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />

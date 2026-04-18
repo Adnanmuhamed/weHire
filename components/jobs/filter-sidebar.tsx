@@ -12,7 +12,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
 import { Filter } from 'lucide-react';
 import { JobType, WorkMode } from '@prisma/client';
-import { INDUSTRY_LIST, getDepartments } from '@/lib/constants/industries';
+import { QUALIFICATION_OPTIONS } from '@/lib/constants/job-fields';
+import { INDUSTRY_OPTIONS } from '@/lib/constants/company-fields';
+import { ALL_DEPARTMENTS } from '@/lib/constants/industries';
 
 export interface CompanyOption {
   id: string;
@@ -60,9 +62,6 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [companySearch, setCompanySearch] = useState('');
-  const degreeFromUrl = searchParams.get('degree') ?? '';
-  const industryFromUrl = searchParams.get('industry') ?? '';
-  const departmentFromUrl = searchParams.get('department') ?? '';
 
   const updateParams = useCallback(
     (updates: Record<string, string | string[] | undefined>) => {
@@ -93,8 +92,6 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
   const salary = searchParams.get('salary') ?? '';
   const companyId = searchParams.get('companyId') ?? '';
 
-  const departmentOptions = industryFromUrl ? getDepartments(industryFromUrl) : [];
-
   const toggleWorkMode = (mode: WorkMode) => {
     const next = workModes.includes(mode)
       ? workModes.filter((m) => m !== mode)
@@ -107,6 +104,17 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
       ? jobTypes.filter((t) => t !== type)
       : [...jobTypes, type];
     updateParams({ jobType: next });
+  };
+
+  const industries = useMemo(() => searchParams.getAll('industry').filter(Boolean), [searchParams]);
+  const qualifications = useMemo(() => searchParams.getAll('qualification').filter(Boolean), [searchParams]);
+  const departments = useMemo(() => searchParams.getAll('department').filter(Boolean), [searchParams]);
+
+  const toggleArrayParam = (key: string, value: string, current: string[]) => {
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    updateParams({ [key]: next });
   };
 
   const filteredCompanies = useMemo(() => {
@@ -176,47 +184,51 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
           <p className="block text-sm font-medium text-foreground mb-2">
             Industry
           </p>
-          <select
-            value={industryFromUrl}
-            onChange={(e) => {
-              const value = e.target.value;
-              // Clear department when industry changes
-              updateParams({ industry: value || undefined, department: undefined });
-            }}
-            className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
-          >
-            <option value="">All Industries</option>
-            {INDUSTRY_LIST.map((ind) => (
-              <option key={ind} value={ind}>
-                {ind}
-              </option>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            {INDUSTRY_OPTIONS.map((ind) => (
+              <label
+                key={ind}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={industries.includes(ind)}
+                  onChange={() => {
+                    const next = industries.includes(ind)
+                      ? industries.filter((v) => v !== ind)
+                      : [...industries, ind];
+                    updateParams({ industry: next, department: undefined });
+                  }}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{ind}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
 
-        {/* Department — shown when industry selected */}
-        {industryFromUrl && departmentOptions.length > 0 && (
-          <div>
-            <p className="block text-sm font-medium text-foreground mb-2">
-              Department
-            </p>
-            <select
-              value={departmentFromUrl}
-              onChange={(e) => {
-                const value = e.target.value;
-                updateParams({ department: value || undefined });
-              }}
-              className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
-            >
-              <option value="">All Departments</option>
-              {departmentOptions.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+        {/* Department */}
+        <div>
+          <p className="block text-sm font-medium text-foreground mb-2">
+            Department
+          </p>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+            {ALL_DEPARTMENTS.map((dept) => (
+              <label
+                key={dept}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={departments.includes(dept)}
+                  onChange={() => toggleArrayParam('department', dept, departments)}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{dept}</span>
+              </label>
+            ))}
           </div>
-        )}
+        </div>
 
         {/* Salary Range */}
         <div>
@@ -242,26 +254,30 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
           </div>
         </div>
 
-        {/* Degree */}
+        {/* Qualification */}
         <div>
           <p className="block text-sm font-medium text-foreground mb-2">
-            Degree
+            Qualification
           </p>
-          <select
-            value={degreeFromUrl}
-            onChange={(e) => {
-              const value = e.target.value;
-              updateParams({ degree: value.trim() || undefined });
-            }}
-            className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-foreground/20"
-          >
-            {DEGREE_OPTIONS.map(({ value, label }) => (
-              <option key={value || 'any'} value={value}>
-                {label}
-              </option>
+          <div className="space-y-2">
+            {QUALIFICATION_OPTIONS.map((val) => (
+              <label
+                key={val}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={qualifications.includes(val)}
+                  onChange={() => toggleArrayParam('qualification', val, qualifications)}
+                  className="w-4 h-4 border-foreground/20 rounded text-foreground focus:ring-2 focus:ring-foreground/20"
+                />
+                <span className="text-sm text-foreground">{val}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
+
+
 
         {/* Companies */}
         <div>

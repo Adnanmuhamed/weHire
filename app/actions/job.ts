@@ -4,11 +4,11 @@ import { db } from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
 import { requireEmployer } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
-import { CreateJobSchema } from '@/lib/validators/job';
-import type { CreateJobInput } from '@/lib/validators/job';
+import { CreateJobSchema, UpdateJobSchema } from '@/lib/validators/job';
+import type { CreateJobInput, UpdateJobInput } from '@/lib/validators/job';
 import { JobType, JobStatus, WorkMode } from '@prisma/client';
 
-export type { CreateJobInput } from '@/lib/validators/job';
+export type { CreateJobInput, UpdateJobInput } from '@/lib/validators/job';
 
 export interface CreateJobResult {
   success?: boolean;
@@ -265,25 +265,7 @@ export async function getJobForEdit(jobId: string): Promise<GetJobForEditResult>
   }
 }
 
-export interface UpdateJobInput {
-  title: string;
-  description: string;
-  location: string;
-  jobType: string;
-  workMode: string;
-  industryType?: string;
-  department?: string;
-  jobRole?: string;
-  qualification?: string;
-  degreeRequired?: string;
-  skillsRequired?: string[];
-  languagesKnown?: string[];
-  salaryMin?: number;
-  salaryMax?: number;
-  minExperience?: number;
-  maxExperience?: number;
-  status?: string;
-}
+// UpdateJobInput is imported from validators
 
 export interface UpdateJobResult {
   success?: boolean;
@@ -292,6 +274,12 @@ export interface UpdateJobResult {
 
 export async function updateJob(jobId: string, input: UpdateJobInput): Promise<UpdateJobResult> {
   try {
+    const parsed = UpdateJobSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid job data' };
+    }
+    const data = parsed.data;
+
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
     const authenticatedUser = requireEmployer(user);
@@ -313,23 +301,23 @@ export async function updateJob(jobId: string, input: UpdateJobInput): Promise<U
     await db.job.update({
       where: { id: jobId },
       data: {
-        title: input.title.trim(),
-        description: input.description.trim(),
-        location: input.location.trim(),
-        jobType: input.jobType as JobType,
-        workMode: input.workMode as WorkMode,
-        industryType: input.industryType?.trim() || null,
-        department: input.department?.trim() || null,
-        jobRole: input.jobRole?.trim() || null,
-        qualification: input.qualification?.trim() || null,
-        degreeRequired: input.degreeRequired?.trim() || null,
-        skillsRequired: input.skillsRequired ?? [],
-        languagesKnown: input.languagesKnown ?? [],
-        salaryMin: input.salaryMin ?? null,
-        salaryMax: input.salaryMax ?? null,
-        minExperience: input.minExperience ?? null,
-        maxExperience: input.maxExperience ?? null,
-        ...(input.status ? { status: input.status as JobStatus } : {}),
+        title: data.title.trim(),
+        description: data.description.trim(),
+        location: data.location.trim(),
+        jobType: data.jobType as JobType,
+        workMode: (data.workMode as WorkMode) ?? 'ONSITE',
+        industryType: data.industryType?.trim() || null,
+        department: data.department?.trim() || null,
+        jobRole: data.jobRole?.trim() || null,
+        qualification: data.qualification ?? null,
+        degreeRequired: data.degreeRequired?.trim() || null,
+        skillsRequired: data.skillsRequired ?? [],
+        languagesKnown: data.languagesKnown ?? [],
+        salaryMin: data.salaryMin ?? null,
+        salaryMax: data.salaryMax ?? null,
+        minExperience: data.minExperience ?? null,
+        maxExperience: data.maxExperience ?? null,
+        ...(data.status ? { status: data.status as JobStatus } : {}),
       },
     });
 

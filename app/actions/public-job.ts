@@ -12,7 +12,7 @@ import { JobType, JobStatus, WorkMode } from '@prisma/client';
 
 export interface PublicJobFilters {
   search?: string;
-  location?: string;
+  location?: string | string[];
   maxExperience?: number;
   workMode?: WorkMode | WorkMode[];
   jobType?: JobType | JobType[];
@@ -20,8 +20,10 @@ export interface PublicJobFilters {
   salaryMin?: number;
   salaryMax?: number | null;
   companyId?: string;
-  industryType?: string;
-  department?: string;
+  industryType?: string | string[];
+  department?: string | string[];
+  qualification?: string | string[];
+  languages?: string | string[];
 }
 
 export interface PublicJob {
@@ -74,6 +76,8 @@ export async function getPublicJobs(
       companyId,
       industryType,
       department,
+      qualification,
+      languages,
     } = filters;
 
     // Search: title or description (case-insensitive)
@@ -85,22 +89,30 @@ export async function getPublicJobs(
       ];
     }
 
-    // Location: partial match
-    if (location && location.trim().length > 0) {
-      where.location = {
-        contains: location.trim(),
-        mode: 'insensitive',
-      };
+    // Location
+    if (location) {
+      if (Array.isArray(location) && location.length > 0) {
+        where.location = { in: location };
+      } else if (typeof location === 'string' && location.trim().length > 0) {
+        where.location = {
+          contains: location.trim(),
+          mode: 'insensitive',
+        };
+      }
     }
 
-    // Experience: jobs where minExperience <= user's max preference
+    // Experience: user input X years => X >= minExperience AND (X <= maxExperience OR maxExperience is null)
     if (expYears !== undefined && expYears !== null && !Number.isNaN(expYears)) {
-      const maxYears = Math.floor(Number(expYears));
+      const xYears = Math.floor(Number(expYears));
       where.AND = where.AND || [];
       (where.AND as unknown[]).push({
-        OR: [
-          { minExperience: { lte: maxYears } },
-          { minExperience: null },
+        AND: [
+          {
+            OR: [{ minExperience: { lte: xYears } }, { minExperience: null }],
+          },
+          {
+            OR: [{ maxExperience: { gte: xYears } }, { maxExperience: null }],
+          },
         ],
       });
     }
@@ -155,19 +167,50 @@ export async function getPublicJobs(
     }
 
     // Industry filter
-    if (industryType && industryType.trim().length > 0) {
-      where.industryType = {
-        equals: industryType.trim(),
-        mode: 'insensitive',
-      };
+    if (industryType) {
+      if (Array.isArray(industryType) && industryType.length > 0) {
+        where.company = {
+          ...((where.company as object) || {}),
+          industryType: { in: industryType },
+        };
+      } else if (typeof industryType === 'string' && industryType.trim().length > 0) {
+        where.company = {
+          ...((where.company as object) || {}),
+          industryType: {
+            equals: industryType.trim(),
+            mode: 'insensitive',
+          },
+        };
+      }
     }
 
     // Department filter
-    if (department && department.trim().length > 0) {
-      where.department = {
-        equals: department.trim(),
-        mode: 'insensitive',
-      };
+    if (department) {
+      if (Array.isArray(department) && department.length > 0) {
+        where.department = { in: department };
+      } else if (typeof department === 'string' && department.trim().length > 0) {
+        where.department = {
+          equals: department.trim(),
+          mode: 'insensitive',
+        };
+      }
+    }
+
+    // Qualification filter
+    if (qualification) {
+      if (Array.isArray(qualification) && qualification.length > 0) {
+        where.qualification = { in: qualification };
+      } else if (typeof qualification === 'string' && qualification.trim().length > 0) {
+        where.qualification = qualification.trim();
+      }
+    }
+
+    // Languages Known filter
+    if (languages) {
+      const langArray = Array.isArray(languages) ? languages : [languages.trim()];
+      if (langArray.length > 0 && langArray[0] !== '') {
+        where.languagesKnown = { hasSome: langArray };
+      }
     }
 
     const jobs = await db.job.findMany({

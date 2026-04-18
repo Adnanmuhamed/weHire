@@ -40,7 +40,7 @@ export default async function LandingPage() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
-                href="/employer/signup"
+                href="/employer-signup"
                 className="inline-flex items-center gap-2 px-8 py-4 border-2 border-foreground text-foreground rounded-lg font-semibold text-lg hover:bg-foreground/5 transition-colors"
               >
                 I&apos;m an Employer

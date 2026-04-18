@@ -17,6 +17,8 @@ import { getTopCompanies } from '@/app/actions/company';
 import JobCard from '@/components/job-card';
 import { JobType } from '@prisma/client';
 import { Settings2, Star, Building2, ArrowRight } from 'lucide-react';
+import LocationAutocomplete from '@/components/ui/location-autocomplete';
+import DashboardReviews from '@/components/dashboard-reviews';
 
 /** Active = not rejected (still in progress or hired). */
 function getActiveApplicationCount(
@@ -90,7 +92,6 @@ export default async function CandidateDashboardPage() {
   const preferences = prefsResult.preferences ?? null;
   const reviews = reviewsResult.reviews ?? [];
   const averageRating = reviewsResult.averageRating ?? 0;
-  const recentReviews = reviews.slice(0, 2);
   const topCompanies = topCompaniesResult.companies ?? [];
   const hasPreferences =
     preferences &&
@@ -194,6 +195,41 @@ export default async function CandidateDashboardPage() {
                 View All Applications →
               </Link>
             </div>
+
+            <div className="rounded-lg border border-foreground/10 bg-background p-6">
+              <h3 className="text-sm font-semibold text-foreground mb-3">
+                Profile Completeness
+              </h3>
+              <p className="text-2xl font-bold text-foreground text-center">
+                {profileStrengthPercent}%
+              </p>
+              <div className="mt-2 h-2 w-full rounded-full bg-foreground/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-foreground transition-all"
+                  style={{ width: `${profileStrengthPercent}%` }}
+                />
+              </div>
+              <p className="mt-2 text-xs text-foreground/60 text-center">
+                Profile Strength
+              </p>
+              {profileMissing.length > 0 ? (
+                <Link
+                  href="/profile"
+                  className="mt-3 block text-xs text-foreground/70 hover:underline text-center"
+                >
+                  Add {profileMissing[0]}
+                  {profileMissing.length > 1
+                    ? ` and ${profileMissing.length - 1} more`
+                    : ''}{' '}
+                  to reach 100%
+                </Link>
+              ) : (
+                <p className="mt-3 text-xs text-foreground/60 text-center">
+                  Your profile is complete.
+                </p>
+              )}
+            </div>
+
             <div className="rounded-lg border border-foreground/10 bg-background p-4">
               <h3 className="text-sm font-semibold text-foreground mb-2">
                 Saved Jobs
@@ -230,54 +266,11 @@ export default async function CandidateDashboardPage() {
               )}
             </div>
             <div className="rounded-lg border border-foreground/10 bg-background p-4">
-              <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+              <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-1.5">
                 <Star className="w-4 h-4" />
                 My Reviews
               </h3>
-              {reviews.length === 0 ? (
-                <p className="text-sm text-foreground/60">
-                  No reviews yet.
-                </p>
-              ) : (
-                <>
-                  <div className="mb-3">
-                    <p className="text-2xl font-bold text-foreground">
-                      {averageRating.toFixed(1)}/5
-                    </p>
-                    <p className="text-xs text-foreground/60">
-                      Average Rating ({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})
-                    </p>
-                  </div>
-                  <ul className="space-y-3">
-                    {recentReviews.map((review) => (
-                      <li key={review.id} className="border-t border-foreground/10 pt-2">
-                        <div className="flex items-center gap-1 mb-1">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-3 h-3 ${
-                                i < review.rating
-                                  ? 'fill-foreground text-foreground'
-                                  : 'text-foreground/20'
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-xs text-foreground/80 line-clamp-2">
-                          {review.comment}
-                        </p>
-                        <p className="text-xs text-foreground/50 mt-1">
-                          {new Date(review.createdAt).toLocaleDateString('en-IN', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
+              <DashboardReviews reviews={reviews} averageRating={averageRating} />
             </div>
           </aside>
 
@@ -305,11 +298,11 @@ export default async function CandidateDashboardPage() {
                   placeholder="Exp (Yrs)"
                   className="w-full sm:w-24 px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm"
                 />
-                <input
-                  type="text"
+                <LocationAutocomplete
                   name="loc"
                   placeholder="Location"
-                  className="w-full sm:w-36 px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground text-sm"
+                  className="w-full sm:w-36"
+                  allowCustom
                 />
                 <button
                   type="submit"
@@ -472,43 +465,6 @@ export default async function CandidateDashboardPage() {
                 </div>
               </section>
             )}
-          </div>
-
-          {/* Column 3: Profile Completeness */}
-          <div className="hidden lg:block">
-            <div className="rounded-lg border border-foreground/10 bg-background p-6">
-              <h3 className="text-sm font-semibold text-foreground mb-3">
-                Profile Completeness
-              </h3>
-              <p className="text-2xl font-bold text-foreground text-center">
-                {profileStrengthPercent}%
-              </p>
-              <div className="mt-2 h-2 w-full rounded-full bg-foreground/10 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-foreground transition-all"
-                  style={{ width: `${profileStrengthPercent}%` }}
-                />
-              </div>
-              <p className="mt-2 text-xs text-foreground/60 text-center">
-                Profile Strength
-              </p>
-              {profileMissing.length > 0 ? (
-                <Link
-                  href="/profile"
-                  className="mt-3 block text-xs text-foreground/70 hover:underline text-center"
-                >
-                  Add {profileMissing[0]}
-                  {profileMissing.length > 1
-                    ? ` and ${profileMissing.length - 1} more`
-                    : ''}{' '}
-                  to reach 100%
-                </Link>
-              ) : (
-                <p className="mt-3 text-xs text-foreground/60 text-center">
-                  Your profile is complete.
-                </p>
-              )}
-            </div>
           </div>
         </div>
       </div>
