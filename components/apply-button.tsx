@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { applyToJob } from '@/app/actions/application';
+import ApplyForm from '@/components/apply-form';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 
 /**
@@ -15,42 +15,21 @@ import { CheckCircle2, Loader2 } from 'lucide-react';
 
 interface ApplyButtonProps {
   jobId: string;
+  jobTitle?: string;
   hasApplied: boolean;
 }
 
-export default function ApplyButton({ jobId, hasApplied }: ApplyButtonProps) {
+export default function ApplyButton({ jobId, jobTitle, hasApplied }: ApplyButtonProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState(hasApplied);
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleApply = async () => {
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      const result = await applyToJob(jobId);
-
-      if (result.error) {
-        // If error is about authentication, redirect to login
-        if (result.error.includes('logged in')) {
-          router.push(`/login?redirect=/jobs/${jobId}`);
-          return;
-        }
-        toast.error('Failed to apply.');
-        setError(result.error);
-        setIsSubmitting(false);
-        return;
-      }
-
-      setApplied(true);
-      toast.success('Application sent successfully!');
-    } catch (err) {
-      console.error('Failed to apply:', err);
-      toast.error('Failed to apply.');
-      setError('Something went wrong. Please try again.');
-      setIsSubmitting(false);
-    }
+    // If we want to strictly require auth, we could do it here, but ApplyForm hits a server action which requires auth anyway
+    setIsModalOpen(true);
   };
 
   if (applied) {
@@ -93,6 +72,19 @@ export default function ApplyButton({ jobId, hasApplied }: ApplyButtonProps) {
       <p className="text-xs text-foreground/60 text-center">
         By applying, you agree to share your profile with the employer.
       </p>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <ApplyForm 
+              jobId={jobId} 
+              jobTitle={jobTitle}
+              userId="" 
+              onCancel={() => setIsModalOpen(false)} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

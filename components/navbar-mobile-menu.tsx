@@ -13,9 +13,9 @@ export default function NavbarMobileMenu({ userRole, isAuthenticated }: NavbarMo
   const [open, setOpen] = useState(false);
 
   const linkCls =
-    'block px-4 py-3 text-sm font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-md transition-colors';
+    'block px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:text-gray-300 hover:bg-white/10 rounded-md';
   const primaryLinkCls =
-    'block px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 rounded-md transition-colors';
+    'block px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:text-gray-300 hover:bg-white/10 rounded-md';
 
   return (
     <div className="md:hidden">

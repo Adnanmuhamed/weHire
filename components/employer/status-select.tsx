@@ -12,20 +12,27 @@ interface StatusSelectProps {
 }
 
 const STATUS_LABELS: Record<ApplicationStatus, string> = {
-  [ApplicationStatus.APPLIED]: 'Applied',
+  [ApplicationStatus.PENDING]: 'Pending',
   [ApplicationStatus.REVIEWING]: 'Reviewing',
+  [ApplicationStatus.INTERVIEWING]: 'Interviewing',
   [ApplicationStatus.SHORTLISTED]: 'Shortlisted',
   [ApplicationStatus.REJECTED]: 'Rejected',
   [ApplicationStatus.HIRED]: 'Hired',
 };
 
 const VALID_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
-  [ApplicationStatus.APPLIED]: [
+  [ApplicationStatus.PENDING]: [
     ApplicationStatus.REVIEWING,
     ApplicationStatus.REJECTED,
   ],
   [ApplicationStatus.REVIEWING]: [
+    ApplicationStatus.INTERVIEWING,
     ApplicationStatus.SHORTLISTED,
+    ApplicationStatus.REJECTED,
+  ],
+  [ApplicationStatus.INTERVIEWING]: [
+    ApplicationStatus.SHORTLISTED,
+    ApplicationStatus.HIRED,
     ApplicationStatus.REJECTED,
   ],
   [ApplicationStatus.SHORTLISTED]: [

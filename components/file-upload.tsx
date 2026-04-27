@@ -9,35 +9,17 @@
 
 import { useState, useRef, ChangeEvent, DragEvent } from 'react';
 import { Upload, X, FileText, ExternalLink } from 'lucide-react';
+import { getPresignedUrl } from '@/app/actions/upload';
 
 export type FileUploadType = 'image' | 'pdf';
 
 interface FileUploadProps {
   value?: string | null;
-  onChange: (url: string | null) => void;
+  onChange: (url: string | null, originalName?: string) => void;
   fileType: FileUploadType;
   label?: string;
   maxSizeMB?: number;
-}
-
-/**
- * Simulate file upload (placeholder implementation)
- * 
- * TODO: Replace with actual upload service (uploadthing, S3, etc.)
- */
-async function simulateUpload(
-  file: File,
-  fileType: FileUploadType
-): Promise<string> {
-  // Simulate upload delay (1.5 seconds)
-  await new Promise((resolve) => setTimeout(resolve, 1500));
-
-  // Return a dummy URL
-  if (fileType === 'image') {
-    return 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix';
-  } else {
-    return 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
-  }
+  folder: 'resumes' | 'avatars' | 'logos' | 'cover-letters';
 }
 
 export default function FileUpload({
@@ -46,6 +28,7 @@ export default function FileUpload({
   fileType,
   label,
   maxSizeMB = 10,
+  folder,
 }: FileUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -97,11 +80,36 @@ export default function FileUpload({
     }, 150);
 
     try {
-      const url = await simulateUpload(file, fileType);
+      // 1. Get Presigned URL
+      const { presignedUrl, publicUrl, error: urlError } = await getPresignedUrl(
+        file.name,
+        file.type,
+        folder
+      );
+
+      if (urlError || !presignedUrl || !publicUrl) {
+        throw new Error(urlError || 'Failed to initialize upload');
+      }
+
+      setUploadProgress(20);
+
+      // 2. Perform direct PUT to S3/R2
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload to storage failed');
+      }
+
       setUploadProgress(100);
-      onChange(url);
+      onChange(publicUrl, file.name);
     } catch (err) {
-      setError('Failed to upload file. Please try again.');
+      setError(err instanceof Error ? err.message : 'Failed to upload file. Please try again.');
       console.error('Upload error:', err);
       onChange(null);
     } finally {

@@ -11,21 +11,28 @@ import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { submitApplication } from '@/app/actions/application';
 import { FileText, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 import Link from 'next/link';
+import FileUpload from '@/components/file-upload';
 
 interface ApplyFormProps {
   jobId: string;
+  jobTitle?: string;
   onCancel: () => void;
   userId: string;
 }
 
-export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
+export default function ApplyForm({ jobId, jobTitle, onCancel, userId }: ApplyFormProps) {
   const router = useRouter();
   const [coverNote, setCoverNote] = useState('');
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [resumeName, setResumeName] = useState<string | null>(null);
+  const [coverLetterUrl, setCoverLetterUrl] = useState<string | null>(null);
+  const [coverLetterName, setCoverLetterName] = useState<string | null>(null);
+  const [replaceResume, setReplaceResume] = useState(false);
+  const [replaceCoverLetter, setReplaceCoverLetter] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const [isLoadingResume, setIsLoadingResume] = useState(true);
 
   // Fetch user's resume URL from profile
@@ -36,6 +43,9 @@ export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
         if (response.ok) {
           const data = await response.json();
           setResumeUrl(data.resumeUrl);
+          setResumeName(data.resumeName);
+          setCoverLetterUrl(data.coverLetterUrl);
+          setCoverLetterName(data.coverLetterName);
         }
       } catch (err) {
         // Ignore errors - resume is optional
@@ -55,16 +65,18 @@ export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
       const result = await submitApplication({
         jobId,
         coverNote: coverNote.trim() || null,
+        resumeUrl,
+        resumeName,
+        coverLetterUrl,
+        coverLetterName,
       });
 
       if (result.error) {
         setError(result.error);
       } else {
-        setIsSuccess(true);
-        // Refresh the page after a short delay
-        setTimeout(() => {
-          router.refresh();
-        }, 2000);
+        toast.success("Application submitted successfully!");
+        onCancel();
+        router.refresh();
       }
     } catch (err) {
       setError('Failed to submit application. Please try again.');
@@ -73,42 +85,13 @@ export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
     }
   };
 
-  if (isSuccess) {
-    return (
-      <div className="p-6 border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 rounded-lg">
-        <div className="flex items-start gap-3">
-          <div className="w-6 h-6 rounded-full bg-green-600 dark:bg-green-400 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg
-              className="w-4 h-4 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-1">
-              Application Submitted!
-            </h3>
-            <p className="text-green-700 dark:text-green-300 text-sm">
-              Your application has been successfully submitted. The employer will review it and get back to you.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="rounded-lg border border-foreground/10 bg-background p-6 space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-foreground mb-1">Apply for this Job</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-1">
+          {jobTitle ? `Apply for ${jobTitle}` : 'Apply for this Job'}
+        </h3>
         <p className="text-sm text-foreground/70">
           Complete your application below
         </p>
@@ -131,31 +114,79 @@ export default function ApplyForm({ jobId, onCancel, userId }: ApplyFormProps) {
           </label>
           {isLoadingResume ? (
             <p className="text-sm text-foreground/60">Loading...</p>
-          ) : resumeUrl ? (
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-foreground/60" />
-              <a
-                href={resumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-foreground/80 hover:text-foreground transition-colors inline-flex items-center gap-1"
-              >
-                View Resume
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+          ) : !resumeUrl || replaceResume ? (
+            <FileUpload 
+              folder="resumes" 
+              fileType="pdf" 
+              onChange={(url, name) => {
+                setResumeUrl(url);
+                setResumeName(name || null);
+                setReplaceResume(false);
+              }} 
+            />
           ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-foreground/60">
-                No resume uploaded yet
-              </p>
-              <Link
-                href="/profile"
-                className="inline-flex items-center gap-1 text-sm text-foreground/70 hover:text-foreground transition-colors"
+            <div className="flex items-center justify-between gap-2 bg-background p-3 rounded-md border border-foreground/10">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <FileText className="w-4 h-4 text-foreground/60 flex-shrink-0" />
+                <a
+                  href={resumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-foreground/80 hover:text-foreground transition-colors truncate block"
+                  title={resumeName || 'View Resume'}
+                >
+                  {resumeName || 'View Resume'}
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplaceResume(true)}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
-                <LinkIcon className="w-3 h-3" />
-                Update Profile to add resume
-              </Link>
+                Replace for this job
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Cover Letter Display */}
+        <div className="p-4 border border-foreground/10 rounded-md bg-foreground/5 mt-4">
+          <label className="block text-sm font-medium text-foreground mb-2">
+            Cover Letter
+          </label>
+          {isLoadingResume ? (
+            <p className="text-sm text-foreground/60">Loading...</p>
+          ) : !coverLetterUrl || replaceCoverLetter ? (
+            <FileUpload 
+              folder="cover-letters" 
+              fileType="pdf" 
+              onChange={(url, name) => {
+                setCoverLetterUrl(url);
+                setCoverLetterName(name || null);
+                setReplaceCoverLetter(false);
+              }} 
+            />
+          ) : (
+            <div className="flex items-center justify-between gap-2 bg-background p-3 rounded-md border border-foreground/10">
+              <div className="flex items-center gap-2 overflow-hidden">
+                <FileText className="w-4 h-4 text-foreground/60 flex-shrink-0" />
+                <a
+                  href={coverLetterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-foreground/80 hover:text-foreground transition-colors truncate block"
+                  title={coverLetterName || 'View Cover Letter'}
+                >
+                  {coverLetterName || 'View Cover Letter'}
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReplaceCoverLetter(true)}
+                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
+              >
+                Replace for this job
+              </button>
             </div>
           )}
         </div>

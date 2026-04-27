@@ -15,13 +15,17 @@ const statusConfig: Record<
   ApplicationStatus,
   { label: string; className: string }
 > = {
-  APPLIED: {
-    label: 'Applied',
+  PENDING: {
+    label: 'Pending',
     className: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
   },
   REVIEWING: {
     label: 'Reviewing',
     className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+  },
+  INTERVIEWING: {
+    label: 'Interviewing',
+    className: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
   },
   SHORTLISTED: {
     label: 'Shortlisted',

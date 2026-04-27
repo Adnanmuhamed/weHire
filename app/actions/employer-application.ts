@@ -49,6 +49,8 @@ export interface ApplicantProfileResult {
           startYear: number | null;
           endYear: number | null;
           isFullTime: boolean;
+          grade: string | null;
+          activities: string | null;
         }>;
         employment: Array<{
           id: string;
@@ -68,6 +70,7 @@ export interface ApplicantProfileResult {
           projectLink: string | null;
           startDate: Date | null;
           endDate: Date | null;
+          skills: string[];
         }>;
         certificates: Array<{
           id: string;
@@ -75,6 +78,14 @@ export interface ApplicantProfileResult {
           issuer: string | null;
           issueDate: Date | null;
           url: string | null;
+          credentialId: string | null;
+        }>;
+        reviews: Array<{
+          id: string;
+          rating: number;
+          comment: string;
+          createdAt: Date;
+          companyName: string | null;
         }>;
       } | null;
     };
@@ -120,6 +131,27 @@ export async function getApplicantProfile(
     });
 
     if (!application) return { error: 'Application not found.' };
+
+    // Fetch reviews the candidate has received
+    const candidateUserId = application.user.id;
+    const reviews = await db.candidateReview.findMany({
+      where: { candidateId: candidateUserId },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        rating: true,
+        comment: true,
+        createdAt: true,
+        company: { select: { name: true } },
+      },
+    });
+    const mappedReviews = reviews.map((r) => ({
+      id: r.id,
+      rating: r.rating,
+      comment: r.comment,
+      createdAt: r.createdAt,
+      companyName: r.company?.name ?? null,
+    }));
     if (application.job.companyId !== company.id) {
       return { error: 'Application not found or access denied.' };
     }
@@ -156,10 +188,37 @@ export async function getApplicantProfile(
                 githubUrl: application.user.profile.githubUrl ?? null,
                 portfolioUrl: application.user.profile.portfolioUrl ?? null,
                 availability: application.user.profile.availability,
-                education: application.user.profile.education,
+                education: application.user.profile.education.map(e => ({
+                  id: e.id,
+                  degree: e.degree,
+                  college: e.college,
+                  stream: e.stream,
+                  startYear: e.startYear,
+                  endYear: e.endYear,
+                  isFullTime: e.isFullTime,
+                  grade: e.grade,
+                  activities: e.activities,
+                })),
                 employment: application.user.profile.employment,
-                projects: application.user.profile.projects,
-                certificates: application.user.profile.certificates,
+                projects: application.user.profile.projects.map((p) => ({
+                  id: p.id,
+                  title: p.title,
+                  description: p.description,
+                  role: p.role,
+                  projectLink: p.projectLink,
+                  startDate: p.startDate,
+                  endDate: p.endDate,
+                  skills: p.skills,
+                })),
+                certificates: application.user.profile.certificates.map(c => ({
+                  id: c.id,
+                  name: c.name,
+                  issuer: c.issuer,
+                  issueDate: c.issueDate,
+                  url: c.url,
+                  credentialId: c.credentialId,
+                })),
+                reviews: mappedReviews,
               }
             : null,
         },

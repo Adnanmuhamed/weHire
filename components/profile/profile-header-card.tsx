@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
-import { Pencil, Linkedin, Github, ExternalLink } from 'lucide-react';
+import { Pencil, Linkedin, Github, ExternalLink, Camera } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { updateHeaderDetails } from '@/app/actions/candidate-profile';
+import { updateHeaderDetails, updateAvatar } from '@/app/actions/candidate-profile';
+import { getPresignedUrl } from '@/app/actions/upload';
 
 interface ProfileHeaderCardProps {
   profile: {
@@ -30,6 +31,8 @@ export default function ProfileHeaderCard({ profile, readOnly = false }: Profile
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     fullName: profile.fullName,
     mobile: profile.mobile ?? '',
@@ -71,6 +74,59 @@ export default function ProfileHeaderCard({ profile, readOnly = false }: Profile
     router.refresh();
   };
 
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const loadingToast = toast.loading('Uploading profile picture...');
+
+    try {
+      const { presignedUrl, publicUrl, error: urlError } = await getPresignedUrl(
+        file.name,
+        file.type,
+        'avatars'
+      );
+
+      if (urlError || !presignedUrl || !publicUrl) {
+        throw new Error(urlError || 'Failed to initialize upload');
+      }
+
+      const response = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload to storage failed');
+      }
+
+      const updateResult = await updateAvatar(publicUrl);
+      if (updateResult.error) throw new Error(updateResult.error);
+
+      toast.success('Profile picture updated', { id: loadingToast });
+      router.refresh();
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to upload image', { id: loadingToast });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <>
       <header className="border-b border-foreground/10 pb-6 mb-6 relative">
@@ -85,21 +141,48 @@ export default function ProfileHeaderCard({ profile, readOnly = false }: Profile
           </button>
         )}
         <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
-          {profile.avatarUrl ? (
-            <div className="relative w-20 h-20 rounded-full overflow-hidden bg-foreground/10 flex-shrink-0">
-              <Image
-                src={profile.avatarUrl}
-                alt=""
-                fill
-                className="object-cover"
-                sizes="80px"
-              />
-            </div>
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-foreground/10 flex items-center justify-center text-2xl font-bold text-foreground/60 flex-shrink-0">
-              {(profile.fullName || 'U').charAt(0).toUpperCase()}
-            </div>
-          )}
+          <div 
+            className={`relative w-20 h-20 rounded-full flex-shrink-0 group overflow-hidden ${!readOnly ? 'cursor-pointer' : ''}`}
+            onClick={() => !readOnly && !isUploadingAvatar && fileInputRef.current?.click()}
+          >
+            {profile.avatarUrl ? (
+              <div className="w-full h-full bg-foreground/10">
+                <Image
+                  src={profile.avatarUrl}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full bg-foreground/10 flex items-center justify-center text-2xl font-bold text-foreground/60">
+                {(profile.fullName || 'U').charAt(0).toUpperCase()}
+              </div>
+            )}
+            
+            {/* Hover Overlay */}
+            {!readOnly && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity flex-col gap-1">
+                <Camera className="w-5 h-5 text-white" />
+              </div>
+            )}
+            
+            {/* Loading Overlay */}
+            {isUploadingAvatar && (
+              <div className="absolute inset-0 bg-background/80 flex items-center justify-center backdrop-blur-sm z-10">
+                <div className="w-5 h-5 border-2 border-foreground border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept="image/*"
+              onChange={handleAvatarFileChange}
+            />
+          </div>
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-foreground">{profile.fullName}</h1>
             {profile.resumeHeadline && (

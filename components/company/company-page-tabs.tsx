@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { MapPin, Briefcase, Clock } from 'lucide-react';
+import { formatToLPA } from '@/lib/utils/format-salary';
 
 interface CompanyPageTabsProps {
   company: {
@@ -26,10 +27,7 @@ export default function CompanyPageTabs({ company, jobs }: CompanyPageTabsProps)
   const [activeTab, setActiveTab] = useState<'overview' | 'jobs'>('overview');
 
   const formatSalary = (min: number | null, max: number | null) => {
-    if (!min && !max) return 'Not disclosed';
-    if (min && max) return `₹${min / 100000}L - ₹${max / 100000}L`;
-    if (min) return `₹${min / 100000}L+`;
-    return 'Not disclosed';
+    return formatToLPA(min, max);
   };
 
   const getTimeAgo = (date: Date) => {

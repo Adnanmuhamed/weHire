@@ -61,17 +61,23 @@ export interface ApplicationWithUser {
  * Lifecycle: APPLIED → REVIEWING → SHORTLISTED → REJECTED | HIRED
  */
 const VALID_TRANSITIONS: Record<ApplicationStatus, ApplicationStatus[]> = {
-  [ApplicationStatus.APPLIED]: [
+  [ApplicationStatus.PENDING]: [
     ApplicationStatus.REVIEWING,
     ApplicationStatus.REJECTED,
   ],
   [ApplicationStatus.REVIEWING]: [
+    ApplicationStatus.INTERVIEWING,
     ApplicationStatus.SHORTLISTED,
     ApplicationStatus.REJECTED,
   ],
-  [ApplicationStatus.SHORTLISTED]: [
-    ApplicationStatus.REJECTED,
+  [ApplicationStatus.INTERVIEWING]: [
+    ApplicationStatus.SHORTLISTED,
     ApplicationStatus.HIRED,
+    ApplicationStatus.REJECTED,
+  ],
+  [ApplicationStatus.SHORTLISTED]: [
+    ApplicationStatus.HIRED,
+    ApplicationStatus.REJECTED,
   ],
   [ApplicationStatus.REJECTED]: [], // Terminal state
   [ApplicationStatus.HIRED]: [], // Terminal state
@@ -174,7 +180,7 @@ export async function applyToJob(
       jobId,
       userId: user.id,
       coverNote: coverNote?.trim() || null,
-      status: ApplicationStatus.APPLIED,
+      status: ApplicationStatus.PENDING,
     },
     include: {
       job: {

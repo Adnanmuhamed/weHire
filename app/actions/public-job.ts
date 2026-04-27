@@ -2,6 +2,7 @@
 
 import { db } from '@/lib/db';
 import { JobType, JobStatus, WorkMode } from '@prisma/client';
+import { getCurrentUser } from '@/lib/auth';
 
 /**
  * Public Job Server Actions
@@ -24,6 +25,7 @@ export interface PublicJobFilters {
   department?: string | string[];
   qualification?: string | string[];
   languages?: string | string[];
+  savedOnly?: boolean;
 }
 
 export interface PublicJob {
@@ -39,6 +41,7 @@ export interface PublicJob {
   minExperience: number | null;
   maxExperience: number | null;
   createdAt: Date;
+  isSaved: boolean;
   company: {
     id: string;
     name: string;
@@ -78,7 +81,28 @@ export async function getPublicJobs(
       department,
       qualification,
       languages,
+      savedOnly,
     } = filters;
+
+    // Resolve current user and their saved job IDs
+    const currentUser = await getCurrentUser();
+    let savedJobIds: Set<string> = new Set();
+    if (currentUser) {
+      const savedRows = await db.savedJob.findMany({
+        where: { userId: currentUser.id },
+        select: { jobId: true },
+      });
+      savedJobIds = new Set(savedRows.map((r) => r.jobId));
+    }
+
+    // Saved-only filter: restrict to user's saved jobs
+    if (savedOnly) {
+      if (currentUser) {
+        where.id = { in: [...savedJobIds] };
+      } else {
+        where.id = { in: [] };
+      }
+    }
 
     // Search: title or description (case-insensitive)
     if (search && search.trim().length > 0) {
@@ -241,7 +265,10 @@ export async function getPublicJobs(
 
     return {
       success: true,
-      jobs: jobs as PublicJob[],
+      jobs: jobs.map((job) => ({
+        ...job,
+        isSaved: savedJobIds.has(job.id),
+      })) as PublicJob[],
     };
   } catch (error) {
     console.error('Failed to fetch public jobs:', error);

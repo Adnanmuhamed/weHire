@@ -113,6 +113,7 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
             value={avatarUrl || null}
             onChange={(url) => setAvatarUrl(url || '')}
             maxSizeMB={5}
+            folder="avatars"
           />
         </div>
 
@@ -279,13 +280,12 @@ export default function ProfileForm({ initialData }: ProfileFormProps) {
           <label htmlFor="resumeUrl" className="block text-sm font-medium mb-2 text-foreground">
             Resume Link
           </label>
-          <input
-            id="resumeUrl"
-            type="url"
-            value={resumeUrl}
-            onChange={(e) => setResumeUrl(e.target.value)}
-            placeholder="Link to Google Drive / LinkedIn"
-            className="w-full px-4 py-2 border border-foreground/20 rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-foreground/20 focus:border-transparent"
+          <FileUpload
+            fileType="pdf"
+            value={resumeUrl || null}
+            onChange={(url) => setResumeUrl(url || '')}
+            maxSizeMB={5}
+            folder="resumes"
           />
         </div>
       </div>

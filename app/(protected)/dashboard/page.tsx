@@ -28,26 +28,61 @@ function getActiveApplicationCount(
 }
 
 /**
- * Profile strength: 4 items (Resume, Photo, Skills, Employment), 25% each.
+ * Calculate profile strength out of 100 based on weighted metrics.
+ * Base (40%): avatar (10), headline (10), location (10), mobile (10)
+ * Assets (30%): resume (20), social links (10)
+ * Exp/Edu (30%): experience (10), education (10), skills (10)
  */
 function getProfileStrength(profile: {
-  resumeUrl: string | null;
   avatarUrl: string | null;
+  resumeHeadline: string | null;
+  location: string | null;
+  currentLocation: string | null;
+  mobile: string | null;
+  resumeUrl: string | null;
+  linkedinUrl: string | null;
+  githubUrl: string | null;
+  portfolioUrl: string | null;
   skills: string[];
   employment: { id: string }[];
-} | null): { percent: number; missing: string[] } {
-  if (!profile) return { percent: 0, missing: ['Resume', 'Photo', 'Skills', 'Employment'] };
-  const hasResume = Boolean(profile.resumeUrl?.trim());
-  const hasPhoto = Boolean(profile.avatarUrl?.trim());
-  const hasSkills = Array.isArray(profile.skills) && profile.skills.length > 0;
-  const hasEmployment = Array.isArray(profile.employment) && profile.employment.length > 0;
+  education: { id: string }[];
+} | null, user: { mobileNumber?: string | null }): { percent: number; missing: string[] } {
+  if (!profile) return { percent: 0, missing: ['Profile Details', 'Resume', 'Photo', 'Skills', 'Employment', 'Education'] };
+
+  let score = 0;
   const missing: string[] = [];
-  if (!hasResume) missing.push('Resume');
-  if (!hasPhoto) missing.push('Photo');
-  if (!hasSkills) missing.push('Skills');
-  if (!hasEmployment) missing.push('Employment');
-  const count = [hasResume, hasPhoto, hasSkills, hasEmployment].filter(Boolean).length;
-  return { percent: Math.round((count / 4) * 100), missing };
+
+  // Base Profile (40%)
+  if (profile.avatarUrl?.trim()) score += 10;
+  else missing.push('Photo');
+
+  if (profile.resumeHeadline?.trim()) score += 10;
+  else missing.push('Headline');
+
+  if (profile.location?.trim() || profile.currentLocation?.trim()) score += 10;
+  else missing.push('Location');
+
+  if (profile.mobile?.trim() || user.mobileNumber?.trim()) score += 10;
+  else missing.push('Phone Number');
+
+  // Professional Assets (30%)
+  if (profile.resumeUrl?.trim()) score += 20;
+  else missing.push('Resume');
+
+  if (profile.linkedinUrl?.trim() || profile.githubUrl?.trim() || profile.portfolioUrl?.trim()) score += 10;
+  else missing.push('Social Links');
+
+  // Experience & Education (30%)
+  if (Array.isArray(profile.employment) && profile.employment.length > 0) score += 10;
+  else missing.push('Employment');
+
+  if (Array.isArray(profile.education) && profile.education.length > 0) score += 10;
+  else missing.push('Education');
+
+  if (Array.isArray(profile.skills) && profile.skills.length > 0) score += 10;
+  else missing.push('Skills');
+
+  return { percent: Math.round(score), missing };
 }
 
 /**
@@ -74,9 +109,14 @@ export default async function CandidateDashboardPage() {
           college: true,
           location: true,
           currentLocation: true,
+          mobile: true,
           resumeUrl: true,
+          linkedinUrl: true,
+          githubUrl: true,
+          portfolioUrl: true,
           skills: true,
           employment: { select: { id: true } },
+          education: { select: { id: true } },
         },
       }),
       getUserApplications(authUser),
@@ -130,7 +170,7 @@ export default async function CandidateDashboardPage() {
   const showViewAllOther = otherJobs.length > 0;
 
   const { percent: profileStrengthPercent, missing: profileMissing } =
-    getProfileStrength(profile);
+    getProfileStrength(profile, user as any);
 
   const displayName = profile?.fullName ?? user.email.split('@')[0] ?? 'User';
   const headline =
@@ -180,9 +220,9 @@ export default async function CandidateDashboardPage() {
                 </Link>
               </div>
             </div>
-            <div className="rounded-lg border border-foreground/10 bg-background p-4">
+            <div id="my-applications" className="rounded-lg border border-foreground/10 bg-background p-4">
               <h3 className="text-sm font-semibold text-foreground mb-2">
-                My Status
+                My Applications
               </h3>
               <p className="text-2xl font-bold text-foreground mb-1">
                 {activeApplicationsCount}
@@ -357,10 +397,13 @@ export default async function CandidateDashboardPage() {
                         title={job.title}
                         location={job.location}
                         jobType={job.jobType as JobType}
+                        workMode={job.workMode}
                         salaryMin={job.salaryMin}
                         salaryMax={job.salaryMax}
                         companyName={job.company.name}
                         companyId={job.company.id}
+                        logoUrl={job.company.logoUrl}
+                        description={job.description}
                         createdAt={job.createdAt}
                         isSaved={false}
                       />
@@ -394,10 +437,13 @@ export default async function CandidateDashboardPage() {
                         title={job.title}
                         location={job.location}
                         jobType={job.jobType as JobType}
+                        workMode={job.workMode}
                         salaryMin={job.salaryMin}
                         salaryMax={job.salaryMax}
                         companyName={job.company.name}
                         companyId={job.company.id}
+                        logoUrl={job.company.logoUrl}
+                        description={job.description}
                         createdAt={job.createdAt}
                         isSaved={false}
                       />

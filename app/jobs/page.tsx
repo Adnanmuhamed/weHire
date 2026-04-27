@@ -5,9 +5,12 @@ import { getAllCompanies } from '@/app/actions/company-public';
 import type { PublicJobFilters } from '@/app/actions/public-job';
 import { JobType, WorkMode } from '@prisma/client';
 import Link from 'next/link';
-import { Building2, MapPin, DollarSign, Calendar } from 'lucide-react';
+import { Building2, MapPin, DollarSign, Calendar, Bookmark } from 'lucide-react';
 import FilterSidebar from '@/components/jobs/filter-sidebar';
 import JobsSearchBar from '@/components/jobs/search-bar';
+import SaveJobButton from '@/components/jobs/save-job-button';
+import { formatToLPA } from '@/lib/utils/format-salary';
+import JobCard from '@/components/job-card';
 
 /**
  * Public Job Board Page
@@ -20,35 +23,9 @@ interface JobsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 function formatSalary(min: number | null, max: number | null): string {
-  if (min === null && max === null) return 'Not specified';
-  if (min === null) return `Up to ₹${max!.toLocaleString()}`;
-  if (max === null) return `₹${min.toLocaleString()}+`;
-  if (min === max) return `₹${min.toLocaleString()}`;
-  return `₹${min.toLocaleString()} - ₹${max.toLocaleString()}`;
+  return formatToLPA(min, max);
 }
-
-const jobTypeLabels: Record<JobType, string> = {
-  FULL_TIME: 'Full Time',
-  PART_TIME: 'Part Time',
-  INTERN: 'Intern',
-  CONTRACT: 'Contract',
-  REMOTE: 'Remote',
-};
-
-const workModeLabels: Record<WorkMode, string> = {
-  REMOTE: 'Remote',
-  HYBRID: 'Hybrid',
-  ONSITE: 'On-site',
-};
 
 function buildFilters(
   params: { [key: string]: string | string[] | undefined }
@@ -122,6 +99,9 @@ function buildFilters(
   if (salaryMin !== undefined) filters.salaryMin = salaryMin;
   if (salaryMax !== undefined) filters.salaryMax = salaryMax;
 
+  const savedOnly = get('saved') === 'true';
+  if (savedOnly) filters.savedOnly = true;
+
   return filters;
 }
 
@@ -154,73 +134,23 @@ async function JobList({ filters }: { filters: PublicJobFilters }) {
   return (
     <div className="space-y-4">
       {jobs.map((job) => (
-        <div
-          key={job.id}
-          className="border border-foreground/10 rounded-lg bg-background p-6 hover:shadow-md transition-shadow"
-        >
-          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-start gap-3 mb-2">
-                {job.company.logoUrl ? (
-                  <img
-                    src={job.company.logoUrl}
-                    alt={job.company.name}
-                    className="w-12 h-12 rounded object-cover"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded bg-foreground/10 flex items-center justify-center shrink-0">
-                    <Building2 className="w-6 h-6 text-foreground/40" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <Link
-                    href={`/jobs/${job.id}`}
-                    className="text-xl font-semibold text-foreground hover:underline mb-1 block"
-                  >
-                    {job.title}
-                  </Link>
-                  <p className="text-foreground/70 font-medium">
-                    {job.company.name}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 text-sm text-foreground/60 mt-3">
-                <div className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4 shrink-0" />
-                  <span>{job.location}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <DollarSign className="w-4 h-4 shrink-0" />
-                  <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-4 h-4 shrink-0" />
-                  <span>{formatDate(job.createdAt)}</span>
-                </div>
-                <span className="px-2 py-1 bg-foreground/10 rounded text-xs">
-                  {jobTypeLabels[job.jobType]}
-                </span>
-                {job.workMode && (
-                  <span className="px-2 py-1 bg-foreground/10 rounded text-xs">
-                    {workModeLabels[job.workMode]}
-                  </span>
-                )}
-              </div>
-
-              <p className="text-sm text-foreground/70 mt-3 line-clamp-2">
-                {job.description}
-              </p>
-            </div>
-
-            <Link
-              href={`/jobs/${job.id}`}
-              className="px-4 py-2 bg-foreground text-background rounded-md font-medium hover:opacity-90 transition-opacity text-sm whitespace-nowrap shrink-0 self-start"
-            >
-              View Details
-            </Link>
-          </div>
-        </div>
+        <li key={job.id} className="list-none">
+          <JobCard
+            jobId={job.id}
+            title={job.title}
+            location={job.location}
+            jobType={job.jobType}
+            workMode={job.workMode}
+            salaryMin={job.salaryMin}
+            salaryMax={job.salaryMax}
+            companyName={job.company.name}
+            companyId={job.company.id}
+            logoUrl={job.company.logoUrl}
+            description={job.description}
+            createdAt={job.createdAt}
+            isSaved={job.isSaved}
+          />
+        </li>
       ))}
     </div>
   );

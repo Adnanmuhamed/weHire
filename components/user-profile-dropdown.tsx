@@ -95,14 +95,14 @@ export default function UserProfileDropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-foreground/10 bg-background shadow-lg z-50">
+        <div className="absolute right-0 mt-2 w-56 rounded-lg border border-white/10 bg-[#111] shadow-lg z-50">
           <div className="py-1">
             {/* User Info */}
-            <div className="px-4 py-3 border-b border-foreground/10">
-              <p className="text-sm font-medium text-foreground">
+            <div className="px-4 py-3 border-b border-white/10">
+              <p className="text-sm font-medium text-white">
                 {userName || 'User'}
               </p>
-              <p className="text-xs text-foreground/60 mt-1">{userEmail}</p>
+              <p className="text-xs text-white/60 mt-1">{userEmail}</p>
             </div>
 
             {/* Menu Items */}
@@ -111,7 +111,7 @@ export default function UserProfileDropdown({
                 <Link
                   href="/employer"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <Briefcase className="w-4 h-4" />
                   Manage Jobs
@@ -120,7 +120,7 @@ export default function UserProfileDropdown({
                 <Link
                   href="/employer/company-profile"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <Building2 className="w-4 h-4" />
                   Company Profile
@@ -129,7 +129,7 @@ export default function UserProfileDropdown({
                 <Link
                   href="/settings"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                   Settings
@@ -138,9 +138,18 @@ export default function UserProfileDropdown({
             ) : (
               <>
                 <Link
+                  href="/applications"
+                  onClick={() => setIsOpen(false)}
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  My Applications
+                </Link>
+
+                <Link
                   href="/profile"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <User className="w-4 h-4" />
                   Edit Profile
@@ -149,7 +158,7 @@ export default function UserProfileDropdown({
                 <Link
                   href="/settings"
                   onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                  className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                 >
                   <Settings className="w-4 h-4" />
                   Settings
@@ -159,7 +168,7 @@ export default function UserProfileDropdown({
                   <Link
                     href="/preferences"
                     onClick={() => setIsOpen(false)}
-                    className="flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
                   >
                     <SlidersHorizontal className="w-4 h-4" />
                     Job Preferences
@@ -172,7 +181,7 @@ export default function UserProfileDropdown({
             <form action={logoutAction}>
               <button
                 type="submit"
-                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-foreground hover:bg-foreground/5 transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-white/10 transition-colors text-left border-t border-white/10 mt-1 pt-3"
               >
                 <LogOut className="w-4 h-4" />
                 Logout

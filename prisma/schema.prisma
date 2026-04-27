@@ -39,8 +39,9 @@ enum WorkMode {
 }
 
 enum ApplicationStatus {
-  APPLIED
+  PENDING @map("APPLIED")
   REVIEWING
+  INTERVIEWING
   SHORTLISTED
   REJECTED
   HIRED
@@ -124,6 +125,9 @@ model Profile {
   skills          String[]
   experience      Int       // years
   resumeUrl       String?
+  resumeName      String?
+  coverLetterUrl  String?
+  coverLetterName String?
   avatarUrl       String?
   linkedinUrl     String?
   githubUrl       String?
@@ -161,6 +165,8 @@ model Education {
   startYear Int?
   endYear   Int?
   isFullTime Boolean @default(true)
+  grade      String?
+  activities String?
 
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -192,6 +198,7 @@ model Project {
   projectLink  String?
   startDate    DateTime?
   endDate      DateTime?
+  skills       String[]
 
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -200,11 +207,12 @@ model Project {
 }
 
 model Certificate {
-  id        String    @id @default(uuid())
-  name      String
-  issuer    String?
-  issueDate DateTime?
-  url       String?
+  id           String    @id @default(uuid())
+  name         String
+  issuer       String?
+  issueDate    DateTime?
+  url          String?
+  credentialId String?
 
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -324,8 +332,12 @@ model Application {
   id        String             @id @default(uuid())
   jobId     String
   userId    String
-  status    ApplicationStatus  @default(APPLIED)
-  coverNote String?
+  status    ApplicationStatus  @default(PENDING)
+  coverNote       String?
+  resumeUrl       String?
+  resumeName      String?
+  coverLetterUrl  String?
+  coverLetterName String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

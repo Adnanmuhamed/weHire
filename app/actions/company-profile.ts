@@ -53,6 +53,7 @@ export async function updateCompanyProfile(
         companyType: data.companyType?.trim() || undefined,
         companySize: data.companySize?.trim() || undefined,
         headquarters: data.headquarters?.trim() || undefined,
+        logoUrl: data.logoUrl?.trim() || undefined,
       },
     });
 

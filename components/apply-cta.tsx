@@ -18,6 +18,7 @@ import ApplyForm from './apply-form';
 
 interface ApplyCTAProps {
   jobId: string;
+  jobTitle?: string;
   currentUser: {
     id: string;
     email: string;
@@ -26,7 +27,7 @@ interface ApplyCTAProps {
   hasApplied: boolean;
 }
 
-export default function ApplyCTA({ jobId, currentUser, hasApplied }: ApplyCTAProps) {
+export default function ApplyCTA({ jobId, jobTitle, currentUser, hasApplied }: ApplyCTAProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
 
@@ -65,17 +66,27 @@ export default function ApplyCTA({ jobId, currentUser, hasApplied }: ApplyCTAPro
     );
   }
 
-  // Seeker & Not Applied: Show form or button
-  if (showForm) {
-    return <ApplyForm jobId={jobId} onCancel={() => setShowForm(false)} userId={currentUser.id} />;
-  }
-
   return (
-    <button
-      onClick={() => setShowForm(true)}
-      className="w-full px-6 py-3 bg-foreground text-background rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-opacity"
-    >
-      Apply Now
-    </button>
+    <>
+      <button
+        onClick={() => setShowForm(true)}
+        className="w-full px-6 py-3 bg-foreground text-background rounded-md font-medium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-foreground/20 transition-opacity"
+      >
+        Apply Now
+      </button>
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4">
+          <div className="w-full max-w-lg shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            <ApplyForm 
+              jobId={jobId} 
+              jobTitle={jobTitle}
+              onCancel={() => setShowForm(false)} 
+              userId={currentUser.id} 
+            />
+          </div>
+        </div>
+      )}
+    </>
   );
 }

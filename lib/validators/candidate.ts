@@ -7,6 +7,8 @@ export const AddEducationSchema = z.object({
   startYear: z.number().int().min(1950).max(new Date().getFullYear() + 10).optional().nullable(),
   endYear: z.number().int().min(1950).max(new Date().getFullYear() + 10).optional().nullable(),
   isFullTime: z.boolean().optional().nullable(),
+  grade: z.string().max(50).optional().nullable(),
+  activities: z.string().max(1000).optional().nullable(),
 }).refine(data => {
   if (data.startYear && data.endYear) {
     return data.startYear <= data.endYear;
@@ -54,6 +56,7 @@ export const AddProjectSchema = z.object({
   projectLink: z.string().url("Invalid URL").max(300).optional().nullable().or(z.literal("")),
   startDate: z.string().optional().nullable(), // ISO date
   endDate: z.string().optional().nullable(),
+  skills: z.array(z.string()).optional(),
 });
 
 export const AddCertificateSchema = z.object({
@@ -61,6 +64,7 @@ export const AddCertificateSchema = z.object({
   issuer: z.string().max(100).optional().nullable(),
   issueDate: z.string().optional().nullable(), // ISO date
   url: z.string().url("Invalid URL").max(300).optional().nullable().or(z.literal("")),
+  credentialId: z.string().max(100).optional().nullable(),
 });
 
 export const UpdatePersonalDetailsSchema = z.object({

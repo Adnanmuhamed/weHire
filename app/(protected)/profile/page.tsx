@@ -12,6 +12,7 @@ import EducationSection from '@/components/profile/education-section';
 import ProjectsSection from '@/components/profile/projects-section';
 import CertificationsSection from '@/components/profile/certifications-section';
 import PersonalDetailsSection from '@/components/profile/personal-details-section';
+import CoverLetterSection from '@/components/profile/cover-letter-section';
 
 /**
  * Profile Page – Resume/CV style for candidates.
@@ -78,7 +79,8 @@ export default async function ProfilePage() {
           />
 
           <div className="space-y-6">
-            <ResumeSection resumeUrl={profile.resumeUrl} />
+            <ResumeSection resumeUrl={profile.resumeUrl} resumeName={profile.resumeName} />
+            <CoverLetterSection coverLetterUrl={profile.coverLetterUrl} coverLetterName={profile.coverLetterName} />
 
             <ResumeHeadlineSection resumeHeadline={profile.resumeHeadline} />
 

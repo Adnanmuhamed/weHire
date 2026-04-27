@@ -26,18 +26,18 @@ export default function EmployerDropdown() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-2 text-sm font-medium text-white hover:text-white/80 transition-opacity inline-flex items-center gap-1"
+        className="px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:text-gray-300 inline-flex items-center gap-1"
       >
         For Employers
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 w-48 bg-background border border-foreground/10 rounded-md shadow-lg py-1 z-50">
+        <div className="absolute top-full right-0 mt-1 w-48 bg-[#111] border border-white/10 rounded-md shadow-lg py-1 z-50">
           <Link
             href="/login?role=EMPLOYER"
             prefetch={false}
-            className="block px-4 py-2 text-sm text-foreground hover:bg-foreground/10 transition-colors"
+            className="block px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             onClick={() => setIsOpen(false)}
           >
             Employer Login
@@ -45,7 +45,7 @@ export default function EmployerDropdown() {
           <Link
             href="/employer-signup"
             prefetch={false}
-            className="block px-4 py-2 text-sm text-foreground hover:bg-foreground/10 transition-colors"
+            className="block px-4 py-2 text-sm text-white/80 hover:text-white hover:bg-white/10 transition-colors"
             onClick={() => setIsOpen(false)}
           >
             Post a Job (Signup)

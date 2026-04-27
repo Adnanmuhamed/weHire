@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, X, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, X, ExternalLink, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { addCertificate, deleteCertificate } from '@/app/actions/candidate-profile';
+import { addCertificate, deleteCertificate, updateCertificate } from '@/app/actions/candidate-profile';
 import type { AddCertificateInput } from '@/app/actions/candidate-profile';
 
 interface CertItem {
@@ -13,6 +13,7 @@ interface CertItem {
   issuer: string | null;
   issueDate: Date | null;
   url: string | null;
+  credentialId: string | null;
 }
 
 interface CertificationsSectionProps {
@@ -23,31 +24,52 @@ export default function CertificationsSection({ certificates }: CertificationsSe
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<AddCertificateInput>({
     name: '',
     issuer: '',
     issueDate: '',
     url: '',
+    credentialId: '',
   });
+
+  const handleEdit = (item: CertItem) => {
+    setEditingId(item.id);
+    setForm({
+      name: item.name,
+      issuer: item.issuer || '',
+      issueDate: item.issueDate ? new Date(item.issueDate).toISOString().substring(0, 10) : '',
+      url: item.url || '',
+      credentialId: item.credentialId || '',
+    });
+    setModalOpen(true);
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
     setLoading(true);
-    const result = await addCertificate({
+    const payload = {
       name: form.name.trim(),
       issuer: form.issuer?.trim() || null,
       issueDate: form.issueDate?.trim() || null,
       url: form.url?.trim() || null,
-    });
+      credentialId: form.credentialId?.trim() || null,
+    };
+
+    const result = editingId
+      ? await updateCertificate(editingId, payload)
+      : await addCertificate(payload);
+
     setLoading(false);
     if (result.error) {
       toast.error(result.error);
       return;
     }
-    toast.success('Certification added');
+    toast.success(editingId ? 'Certification updated' : 'Certification added');
     setModalOpen(false);
-    setForm({ name: '', issuer: '', issueDate: '', url: '' });
+    setEditingId(null);
+    setForm({ name: '', issuer: '', issueDate: '', url: '', credentialId: '' });
     router.refresh();
   };
 
@@ -69,7 +91,11 @@ export default function CertificationsSection({ certificates }: CertificationsSe
         </h2>
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+            setEditingId(null);
+            setForm({ name: '', issuer: '', issueDate: '', url: '', credentialId: '' });
+            setModalOpen(true);
+          }}
           className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
         >
           <Plus className="w-4 h-4" />
@@ -99,6 +125,9 @@ export default function CertificationsSection({ certificates }: CertificationsSe
                       })}
                     </p>
                   )}
+                  {c.credentialId && (
+                    <p className="text-xs text-foreground/50 mt-0.5 font-mono">ID: {c.credentialId}</p>
+                  )}
                   {c.url && (
                     <a
                       href={c.url}
@@ -110,14 +139,24 @@ export default function CertificationsSection({ certificates }: CertificationsSe
                     </a>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(c.id)}
-                  className="p-1.5 text-foreground/50 hover:text-red-600 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  aria-label="Delete"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(c)}
+                    className="p-1.5 text-foreground/50 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md"
+                    aria-label="Edit"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(c.id)}
+                    className="p-1.5 text-foreground/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
               </li>
             );
           })
@@ -134,10 +173,13 @@ export default function CertificationsSection({ certificates }: CertificationsSe
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="relative w-full max-w-md bg-background border border-foreground/10 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-4 border-b border-foreground/10">
-                <h3 className="text-lg font-semibold text-foreground">Add Certification</h3>
+                <h3 className="text-lg font-semibold text-foreground">{editingId ? 'Edit Certification' : 'Add Certification'}</h3>
                 <button
                   type="button"
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => {
+                    setModalOpen(false);
+                    setEditingId(null);
+                  }}
                   className="p-2 hover:bg-foreground/10 rounded-md"
                   aria-label="Close"
                 >
@@ -183,17 +225,29 @@ export default function CertificationsSection({ certificates }: CertificationsSe
                     placeholder="https://..."
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1">Credential ID (optional)</label>
+                  <input
+                    value={form.credentialId ?? ''}
+                    onChange={(e) => setForm((f) => ({ ...f, credentialId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-background text-foreground"
+                    placeholder="e.g. AWS-123456"
+                  />
+                </div>
                 <div className="flex gap-2 pt-2">
                   <button
                     type="submit"
                     disabled={loading}
                     className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md disabled:opacity-50"
                   >
-                    {loading ? 'Adding…' : 'Add'}
+                    {loading ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setModalOpen(false)}
+                    onClick={() => {
+                      setModalOpen(false);
+                      setEditingId(null);
+                    }}
                     className="px-4 py-2 text-sm font-medium border border-foreground/20 rounded-md text-foreground"
                   >
                     Cancel

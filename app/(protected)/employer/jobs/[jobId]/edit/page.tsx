@@ -309,13 +309,15 @@ export default function EditJobPage({ params }: EditJobPageProps) {
                 <label htmlFor="salaryMin" className={labelCls}>Min Salary (₹)</label>
                 <input id="salaryMin" name="salaryMin" type="number" min="0" step="1000"
                   value={formData.salaryMin} onChange={set('salaryMin')} className={inputCls}
-                  placeholder="e.g., 500000" disabled={isSubmitting} />
+                  placeholder="e.g., 300000" disabled={isSubmitting} />
+                <p className="mt-1 text-xs text-foreground/50">Enter raw amount in INR (e.g., 300000 for 3 LPA)</p>
               </div>
               <div>
                 <label htmlFor="salaryMax" className={labelCls}>Max Salary (₹)</label>
                 <input id="salaryMax" name="salaryMax" type="number" min="0" step="1000"
                   value={formData.salaryMax} onChange={set('salaryMax')} className={inputCls}
-                  placeholder="e.g., 1000000" disabled={isSubmitting} />
+                  placeholder="e.g., 600000" disabled={isSubmitting} />
+                <p className="mt-1 text-xs text-foreground/50">Enter raw amount in INR (e.g., 600000 for 6 LPA)</p>
               </div>
             </div>
 

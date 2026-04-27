@@ -14,4 +14,5 @@ export const UpdateCompanyProfileSchema = z.object({
   companyType: z.string().max(50).optional().nullable(),
   companySize: z.string().max(50).optional().nullable(),
   headquarters: z.string().max(100).optional().nullable(),
+  logoUrl: z.string().url("Invalid URL").max(1000).optional().nullable().or(z.literal("")),
 });

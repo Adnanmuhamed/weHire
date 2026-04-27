@@ -4,8 +4,9 @@ import { getCurrentUser } from '@/lib/auth';
 import { getJobById } from '@/app/actions/public-job';
 import { db } from '@/lib/db';
 import { JobType, Role } from '@prisma/client';
-import { Briefcase, MapPin, Calendar, DollarSign, User, ExternalLink, Building2 } from 'lucide-react';
+import { Briefcase, MapPin, Calendar, IndianRupee, User, ExternalLink, Building2, Tag, Layers, GraduationCap, Globe, Bookmark } from 'lucide-react';
 import ApplyButton from '@/components/apply-button';
+import { formatToLPA } from '@/lib/utils/format-salary';
 
 /**
  * Job Details Page
@@ -40,12 +41,14 @@ const jobTypeLabels: Record<JobType, string> = {
   REMOTE: 'Remote',
 };
 
+const workModeLabels: Record<string, string> = {
+  REMOTE: 'Remote',
+  HYBRID: 'Hybrid',
+  ONSITE: 'On-site',
+};
+
 function formatSalary(min: number | null, max: number | null): string {
-  if (min === null && max === null) return 'Not specified';
-  if (min === null) return `Up to $${max!.toLocaleString()}`;
-  if (max === null) return `$${min.toLocaleString()}+`;
-  if (min === max) return `$${min.toLocaleString()}`;
-  return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+  return formatToLPA(min, max);
 }
 
 
@@ -63,11 +66,18 @@ export default async function JobDetailsPage({ params }: PageProps) {
       location: true,
       jobType: true,
       workMode: true,
-      degree: true,
       salaryMin: true,
       salaryMax: true,
       minExperience: true,
       maxExperience: true,
+      degreeRequired: true,
+      degree: true,
+      qualification: true,
+      jobRole: true,
+      skillsRequired: true,
+      languagesKnown: true,
+      industryType: true,
+      department: true,
       createdAt: true,
       status: true,
       company: {
@@ -152,37 +162,119 @@ export default async function JobDetailsPage({ params }: PageProps) {
                 </Link>
               </div>
 
-              {/* Job Meta */}
-              <div className="flex flex-wrap gap-4 text-sm text-foreground/70">
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-foreground/60" />
-                  <span>{job.location}</span>
+              {/* Job Meta Info Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 border-y border-foreground/10 py-8">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Salary (LPA)</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <IndianRupee className="w-4 h-4 text-primary" />
+                    <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-foreground/60" />
-                  <span>{jobTypeLabels[job.jobType]}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <DollarSign className="w-4 h-4 text-foreground/60" />
-                  <span>{formatSalary(job.salaryMin, job.salaryMax)}</span>
-                </div>
-
-                {(job.minExperience !== null || job.maxExperience !== null) && (
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-foreground/60" />
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Experience</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <User className="w-4 h-4 text-primary" />
                     <span>
-                      {job.minExperience ?? 0}
-                      {job.maxExperience !== null ? `–${job.maxExperience}` : '+'} years experience
+                      {(job.minExperience !== null || job.maxExperience !== null) ? (
+                        <>
+                          {job.minExperience ?? 0}
+                          {job.maxExperience !== null ? `–${job.maxExperience}` : '+'} years
+                        </>
+                      ) : 'Any'}
                     </span>
                   </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-foreground/60" />
-                  <span>Posted {formatRelativeTime(job.createdAt)}</span>
                 </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Work Mode</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Building2 className="w-4 h-4 text-primary" />
+                    <span>{workModeLabels[job.workMode] || job.workMode}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Education</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <GraduationCap className="w-4 h-4 text-primary" />
+                    <span className="truncate" title={job.qualification || job.degreeRequired || job.degree || 'Any'}>
+                      {job.qualification || job.degreeRequired || job.degree || 'Any'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Industry</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Building2 className="w-4 h-4 text-primary" />
+                    <span>{job.industryType || 'Not specified'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Department</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Layers className="w-4 h-4 text-primary" />
+                    <span>{job.department || 'Not specified'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Job Role</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Tag className="w-4 h-4 text-primary" />
+                    <span>{job.jobRole || 'Not specified'}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Location</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="truncate" title={job.location}>{job.location}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Job Type</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Briefcase className="w-4 h-4 text-primary" />
+                    <span>{jobTypeLabels[job.jobType]}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-foreground/40 uppercase tracking-wider">Languages</p>
+                  <div className="flex items-center gap-2 text-foreground font-medium">
+                    <Globe className="w-4 h-4 text-primary" />
+                    <span className="truncate" title={job.languagesKnown?.join(', ') || 'Not specified'}>
+                      {job.languagesKnown && job.languagesKnown.length > 0
+                        ? job.languagesKnown.join(', ')
+                        : 'Not specified'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills Section */}
+              {job.skillsRequired && job.skillsRequired.length > 0 && (
+                <div className="py-6 border-b border-foreground/10">
+                  <h3 className="text-sm font-semibold text-foreground/40 uppercase tracking-wider mb-4">Required Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skillsRequired.map((skill) => (
+                      <span key={skill} className="px-3 py-1 bg-foreground/5 text-foreground/80 rounded-full text-sm font-medium border border-foreground/10">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-xs text-foreground/50">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Posted {formatRelativeTime(job.createdAt)}</span>
               </div>
 
               {/* Job Description */}
@@ -202,15 +294,15 @@ export default async function JobDetailsPage({ params }: PageProps) {
                   <Building2 className="w-5 h-5 text-foreground/70" />
                   <h3 className="text-lg font-semibold text-foreground">Company</h3>
                 </div>
-                <div>
+                <div className="flex flex-col gap-3">
                   <Link
                     href={`/company/${job.company.id}`}
-                    className="font-medium text-foreground hover:text-foreground/80 hover:underline transition-colors"
+                    className="font-medium text-foreground hover:text-foreground/80 hover:underline transition-colors block"
                   >
                     {job.company.name}
                   </Link>
                   {job.company.location && (
-                    <p className="text-sm text-foreground/70 mt-1 flex items-center gap-1">
+                    <p className="text-sm text-foreground/70 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {job.company.location}
                     </p>
@@ -220,7 +312,7 @@ export default async function JobDetailsPage({ params }: PageProps) {
                       href={job.company.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-foreground/70 hover:text-foreground mt-2 inline-flex items-center gap-1 transition-colors"
+                      className="text-sm text-foreground/70 hover:text-foreground inline-flex items-center gap-1 transition-colors"
                     >
                       Visit website
                       <ExternalLink className="w-3 h-3" />
@@ -228,7 +320,7 @@ export default async function JobDetailsPage({ params }: PageProps) {
                   )}
                   <Link
                     href={`/company/${job.company.id}`}
-                    className="text-sm text-foreground/70 hover:text-foreground mt-3 inline-flex items-center gap-1 transition-colors font-medium"
+                    className="text-sm text-foreground/70 hover:text-foreground mt-2 inline-flex items-center gap-1 transition-colors font-medium border border-foreground/10 px-3 py-1.5 rounded-md hover:bg-foreground/5 w-fit"
                   >
                     View Company Profile →
                   </Link>
@@ -237,7 +329,7 @@ export default async function JobDetailsPage({ params }: PageProps) {
 
               {/* Apply CTA */}
               <div className="sticky top-24">
-                <ApplyButton jobId={jobId} hasApplied={hasApplied} />
+                <ApplyButton jobId={jobId} hasApplied={hasApplied} jobTitle={job.title} />
               </div>
             </aside>
           </div>

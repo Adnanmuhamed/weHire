@@ -23,11 +23,17 @@ export async function GET(request: NextRequest) {
       where: { userId: user.id },
       select: {
         resumeUrl: true,
+        resumeName: true,
+        coverLetterUrl: true,
+        coverLetterName: true,
       },
     });
 
     return NextResponse.json({
       resumeUrl: profile?.resumeUrl || null,
+      resumeName: profile?.resumeName || null,
+      coverLetterUrl: profile?.coverLetterUrl || null,
+      coverLetterName: profile?.coverLetterName || null,
     });
   } catch (error) {
     console.error('Failed to fetch resume URL:', error);

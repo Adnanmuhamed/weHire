@@ -10,6 +10,7 @@ import EducationSection from '@/components/profile/education-section';
 import ProjectsSection from '@/components/profile/projects-section';
 import KeySkillsSection from '@/components/profile/key-skills-section';
 import RateCandidateButton from '@/components/employer/rate-candidate-button';
+import DashboardReviews from '@/components/dashboard-reviews';
 
 interface PageProps {
   params: Promise<{ applicationId: string }>;
@@ -119,6 +120,22 @@ export default async function ApplicantViewPage({ params }: PageProps) {
         <EducationSection education={profile.education} readOnly />
 
         <ProjectsSection projects={profile.projects} readOnly />
+
+        {/* Reviews Section */}
+        <section className="pt-6">
+          <h2 className="text-sm font-semibold text-foreground/70 uppercase tracking-wide mb-4">
+            Reviews Received
+          </h2>
+          <DashboardReviews
+            reviews={profile.reviews}
+            averageRating={
+              profile.reviews.length > 0
+                ? profile.reviews.reduce((sum, r) => sum + r.rating, 0) /
+                  profile.reviews.length
+                : 0
+            }
+          />
+        </section>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ApplicationStatus } from '@prisma/client';
 import ApplicationStatusBadge from './application-status-badge';
+import WithdrawApplicationButton from './withdraw-application-button';
 
 /**
  * Application Card Component
@@ -41,6 +42,7 @@ function formatFullDate(date: Date): string {
 }
 
 export default function ApplicationCard({
+  applicationId,
   jobId,
   jobTitle,
   companyName,
@@ -70,10 +72,11 @@ export default function ApplicationCard({
         </div>
 
         {/* Footer */}
-        <div className="pt-2 border-t border-foreground/10">
+        <div className="pt-4 border-t border-foreground/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <p className="text-xs text-foreground/50">
             Applied {formatDate(appliedDate)} • {formatFullDate(appliedDate)}
           </p>
+          <WithdrawApplicationButton applicationId={applicationId} />
         </div>
       </div>
     </article>

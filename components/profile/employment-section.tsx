@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Plus, Trash2, X, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { addEmployment, deleteEmployment } from '@/app/actions/candidate-profile';
+import { addEmployment, deleteEmployment, updateEmployment } from '@/app/actions/candidate-profile';
 import type { AddEmploymentInput } from '@/app/actions/candidate-profile';
 
 interface EmploymentItem {
@@ -34,6 +34,7 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<AddEmploymentInput>({
     designation: '',
     company: '',
@@ -44,10 +45,24 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
     description: '',
   });
 
+  const handleEdit = (item: EmploymentItem) => {
+    setEditingId(item.id);
+    setForm({
+      designation: item.designation,
+      company: item.company,
+      location: item.location || '',
+      startYear: item.startYear || undefined,
+      endYear: item.endYear || undefined,
+      isCurrent: item.isCurrent,
+      description: item.description || '',
+    });
+    setModalOpen(true);
+  };
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const result = await addEmployment({
+    const payload = {
       designation: form.designation.trim(),
       company: form.company.trim(),
       location: form.location?.trim() || undefined,
@@ -55,14 +70,20 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
       endYear: form.endYear,
       isCurrent: form.isCurrent,
       description: form.description?.trim() || undefined,
-    });
+    };
+    
+    const result = editingId 
+      ? await updateEmployment(editingId, payload)
+      : await addEmployment(payload);
+
     setLoading(false);
     if (result.error) {
       toast.error(result.error);
       return;
     }
-    toast.success('Employment added');
+    toast.success(editingId ? 'Employment updated' : 'Employment added');
     setModalOpen(false);
+    setEditingId(null);
     setForm({
       designation: '',
       company: '',
@@ -94,7 +115,19 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
         {!readOnly && (
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => {
+              setEditingId(null);
+              setForm({
+                designation: '',
+                company: '',
+                location: '',
+                startYear: undefined,
+                endYear: undefined,
+                isCurrent: false,
+                description: '',
+              });
+              setModalOpen(true);
+            }}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:opacity-80"
           >
             <Plus className="w-4 h-4" />
@@ -125,14 +158,24 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
                   )}
                 </div>
                 {!readOnly && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id)}
-                    className="p-1.5 text-foreground/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                    aria-label="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(item)}
+                      className="p-1.5 text-foreground/50 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md"
+                      aria-label="Edit"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(item.id)}
+                      className="p-1.5 text-foreground/50 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md"
+                      aria-label="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 )}
               </li>
             );
@@ -150,9 +193,12 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="relative w-full max-w-md bg-background border border-foreground/10 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-4 border-b border-foreground/10">
-                <h3 className="text-lg font-semibold text-foreground">Add Employment</h3>
+                <h3 className="text-lg font-semibold text-foreground">{editingId ? 'Edit Employment' : 'Add Employment'}</h3>
                 <button
-                  onClick={() => setModalOpen(false)}
+                  onClick={() => {
+                    setModalOpen(false);
+                    setEditingId(null);
+                  }}
                   className="p-2 hover:bg-foreground/10 rounded-md"
                   aria-label="Close"
                 >
@@ -245,11 +291,14 @@ export default function EmploymentSection({ employment, readOnly = false }: Empl
                     disabled={loading}
                     className="px-4 py-2 text-sm font-medium bg-foreground text-background rounded-md hover:opacity-90 disabled:opacity-50"
                   >
-                    {loading ? 'Adding…' : 'Add'}
+                    {loading ? 'Saving…' : 'Save'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setModalOpen(false)}
+                    onClick={() => {
+                      setModalOpen(false);
+                      setEditingId(null);
+                    }}
                     className="px-4 py-2 text-sm font-medium border border-foreground/20 rounded-md text-foreground hover:bg-foreground/5"
                   >
                     Cancel

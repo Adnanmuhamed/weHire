@@ -37,7 +37,7 @@ async function logoutAction() {
 }
 
 const navLinkCls =
-  'px-3 py-2 text-sm font-semibold text-white/80 hover:text-white transition-colors rounded-md hover:bg-white/10';
+  'px-3 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:text-gray-300 rounded-md hover:bg-white/10';
 
 export default async function Navbar() {
   const user = await getCurrentUser();
@@ -86,7 +86,7 @@ export default async function Navbar() {
                     </Link>
                     <Link
                       href="/employer/jobs/new"
-                      className="px-4 py-2 text-sm font-semibold bg-white text-black rounded-md hover:bg-white/90 transition-colors"
+                      className="px-4 py-2 text-sm font-semibold text-white border border-white/20 rounded-md hover:bg-white/10 transition-colors"
                     >
                       Post a Job
                     </Link>
@@ -119,13 +119,13 @@ export default async function Navbar() {
                 <EmployerDropdown />
                 <Link
                   href="/login"
-                  className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors rounded-md hover:bg-white/10"
+                  className="px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:text-gray-300 rounded-md hover:bg-white/10"
                 >
                   Login
                 </Link>
                 <Link
                   href="/signup"
-                  className="px-4 py-2 text-sm font-medium bg-white text-black rounded-md hover:bg-white/90 transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white border border-white/20 rounded-md hover:bg-white/10 transition-colors"
                 >
                   Sign Up
                 </Link>

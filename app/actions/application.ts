@@ -23,8 +23,19 @@ export interface ApplyToJobResult {
 export async function submitApplication(data: {
   jobId: string;
   coverNote?: string | null;
+  resumeUrl?: string | null;
+  resumeName?: string | null;
+  coverLetterUrl?: string | null;
+  coverLetterName?: string | null;
 }): Promise<ApplyToJobResult> {
-  return applyToJob(data.jobId, data.coverNote ?? undefined);
+  return applyToJob(
+    data.jobId,
+    data.coverNote ?? undefined,
+    data.resumeUrl ?? undefined,
+    data.resumeName ?? undefined,
+    data.coverLetterUrl ?? undefined,
+    data.coverLetterName ?? undefined
+  );
 }
 
 /**
@@ -39,7 +50,11 @@ export async function submitApplication(data: {
  */
 export async function applyToJob(
   jobId: string,
-  coverNote?: string
+  coverNote?: string,
+  resumeUrl?: string,
+  resumeName?: string,
+  coverLetterUrl?: string,
+  coverLetterName?: string
 ): Promise<ApplyToJobResult> {
   try {
     // Check authentication
@@ -93,10 +108,39 @@ export async function applyToJob(
       data: {
         jobId,
         userId: user.id,
-        status: ApplicationStatus.APPLIED,
+        status: ApplicationStatus.PENDING,
         coverNote: coverNote?.trim() || null,
+        resumeUrl: resumeUrl?.trim() || null,
+        resumeName: resumeName?.trim() || null,
+        coverLetterUrl: coverLetterUrl?.trim() || null,
+        coverLetterName: coverLetterName?.trim() || null,
       },
     });
+
+    // Smart Sync: update profile if missing files
+    if (resumeUrl || coverLetterUrl) {
+      const profile = await db.profile.findUnique({
+        where: { userId: user.id },
+        select: { id: true, resumeUrl: true, coverLetterUrl: true }
+      });
+      if (profile) {
+        const updateData: any = {};
+        if (resumeUrl && !profile.resumeUrl) {
+          updateData.resumeUrl = resumeUrl.trim();
+          updateData.resumeName = resumeName?.trim() || null;
+        }
+        if (coverLetterUrl && !profile.coverLetterUrl) {
+          updateData.coverLetterUrl = coverLetterUrl.trim();
+          updateData.coverLetterName = coverLetterName?.trim() || null;
+        }
+        if (Object.keys(updateData).length > 0) {
+          await db.profile.update({
+            where: { id: profile.id },
+            data: updateData,
+          });
+        }
+      }
+    }
 
     // Revalidate paths to ensure UI updates immediately
     revalidatePath(`/jobs/${jobId}`);
@@ -133,6 +177,7 @@ export interface JobApplicationCandidate {
     profile: {
       fullName: string;
       resumeUrl: string | null;
+      coverLetterUrl: string | null;
       mobile: string | null;
     } | null;
   };
@@ -186,6 +231,8 @@ export async function getJobApplications(
         jobId: true,
         status: true,
         coverNote: true,
+        resumeUrl: true,
+        coverLetterUrl: true,
         createdAt: true,
         user: {
           select: {
@@ -196,6 +243,7 @@ export async function getJobApplications(
               select: {
                 fullName: true,
                 resumeUrl: true,
+                coverLetterUrl: true,
                 mobile: true,
               },
             },
@@ -218,7 +266,8 @@ export async function getJobApplications(
         profile: app.user.profile
           ? {
               fullName: app.user.profile.fullName,
-              resumeUrl: app.user.profile.resumeUrl,
+              resumeUrl: app.resumeUrl || app.user.profile.resumeUrl,
+              coverLetterUrl: app.coverLetterUrl || app.user.profile.coverLetterUrl,
               mobile: app.user.profile.mobile,
             }
           : null,
@@ -297,3 +346,46 @@ export async function updateApplicationStatus(
   }
 }
 
+
+/**
+ * Withdraw an application (Candidate only)
+ */
+export async function withdrawApplication(applicationId: string) {
+  try {
+    const user = await getCurrentUser();
+    
+    if (!user) {
+      return { error: 'You must be logged in to withdraw an application.' };
+    }
+
+    // Verify the application exists and belongs to the current user
+    const application = await db.application.findUnique({
+      where: { id: applicationId },
+      select: { userId: true, jobId: true }
+    });
+
+    if (!application) {
+      return { error: 'Application not found.' };
+    }
+
+    if (application.userId !== user.id) {
+      return { error: 'Unauthorized. You can only withdraw your own applications.' };
+    }
+
+    // Delete the application
+    await db.application.delete({
+      where: { id: applicationId }
+    });
+
+    // Revalidate BOTH candidate and employer paths so the UI updates instantly everywhere
+    revalidatePath('/applications');
+    revalidatePath('/dashboard');
+    revalidatePath(`/jobs/${application.jobId}`);
+    revalidatePath(`/employer/jobs/${application.jobId}/applications`);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to withdraw application:', error);
+    return { error: 'Failed to withdraw application. Please try again.' };
+  }
+}

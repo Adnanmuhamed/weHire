@@ -11,6 +11,7 @@ import {
   LOCATION_OPTIONS
 } from '@/lib/constants/company-fields';
 import LocationAutocomplete from '@/components/ui/location-autocomplete';
+import FileUpload from '@/components/file-upload';
 
 interface CompanyProfileFormProps {
   company: {
@@ -27,6 +28,7 @@ interface CompanyProfileFormProps {
     companyType: string | null;
     companySize: string | null;
     headquarters: string | null;
+    logoUrl: string | null;
   };
   user: {
     designation: string | null;
@@ -50,6 +52,7 @@ export default function CompanyProfileForm({ company, user }: CompanyProfileForm
     state: company.state || '',
     pincode: company.pincode || '',
     gstin: company.gstin || '',
+    logoUrl: company.logoUrl || '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,6 +85,17 @@ export default function CompanyProfileForm({ company, user }: CompanyProfileForm
               value={company.name}
               disabled
               className="w-full px-3 py-2 border border-foreground/20 rounded-md bg-foreground/5 text-foreground/70 cursor-not-allowed"
+            />
+          </div>
+
+          <div>
+            <FileUpload
+              fileType="image"
+              label="Company Logo"
+              value={formData.logoUrl || null}
+              onChange={(url) => setFormData({ ...formData, logoUrl: url || '' })}
+              maxSizeMB={2}
+              folder="logos"
             />
           </div>
 

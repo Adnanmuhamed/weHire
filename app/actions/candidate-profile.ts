@@ -50,6 +50,8 @@ export async function addEducation(
         startYear: data.startYear ?? null,
         endYear: data.endYear ?? null,
         isFullTime: data.isFullTime ?? true,
+        grade: data.grade?.trim() || null,
+        activities: data.activities?.trim() || null,
       },
       select: { id: true },
     });
@@ -90,6 +92,49 @@ export async function deleteEducation(
   } catch (e) {
     console.error('deleteEducation error:', e);
     return { error: 'Failed to delete education' };
+  }
+}
+
+export async function updateEducation(
+  id: string,
+  input: AddEducationInput
+): Promise<AddEducationResult> {
+  try {
+    const parsed = AddEducationSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid education data' };
+    }
+    const data = parsed.data;
+
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    await db.education.updateMany({
+      where: { id, profileId: profile.id },
+      data: {
+        degree: data.degree.trim(),
+        college: data.college.trim(),
+        stream: data.stream?.trim() || null,
+        startYear: data.startYear ?? null,
+        endYear: data.endYear ?? null,
+        isFullTime: data.isFullTime ?? true,
+        grade: data.grade?.trim() || null,
+        activities: data.activities?.trim() || null,
+      },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true, id };
+  } catch (e) {
+    console.error('updateEducation error:', e);
+    return { error: 'Failed to update education' };
   }
 }
 
@@ -176,6 +221,48 @@ export async function deleteEmployment(
   }
 }
 
+export async function updateEmployment(
+  id: string,
+  input: AddEmploymentInput
+): Promise<AddEmploymentResult> {
+  try {
+    const parsed = AddEmploymentSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid employment data' };
+    }
+    const data = parsed.data;
+
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    await db.employment.updateMany({
+      where: { id, profileId: profile.id },
+      data: {
+        designation: data.designation.trim(),
+        company: data.company.trim(),
+        location: data.location?.trim() || null,
+        startYear: data.startYear ?? null,
+        endYear: data.endYear ?? null,
+        isCurrent: data.isCurrent ?? false,
+        description: data.description?.trim() || null,
+      },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true, id };
+  } catch (e) {
+    console.error('updateEmployment error:', e);
+    return { error: 'Failed to update employment' };
+  }
+}
+
 /* ========== Header details (name, contact, social) ========== */
 
 export type UpdateHeaderDetailsInput = z.infer<typeof UpdateHeaderDetailsSchema>;
@@ -235,7 +322,7 @@ export interface UpdateResumeResult {
   error?: string;
 }
 
-export async function updateResume(url: string | null): Promise<UpdateResumeResult> {
+export async function updateResume(url: string | null, resumeName?: string | null): Promise<UpdateResumeResult> {
   try {
     const user = await getCurrentUser();
     if (!user) return { error: 'Not authenticated' };
@@ -249,7 +336,10 @@ export async function updateResume(url: string | null): Promise<UpdateResumeResu
 
     await db.profile.update({
       where: { id: profile.id },
-      data: { resumeUrl: url?.trim() || null },
+      data: { 
+        resumeUrl: url?.trim() || null,
+        resumeName: resumeName?.trim() || null,
+      },
     });
     revalidatePath('/profile');
     revalidatePath('/dashboard');
@@ -257,6 +347,73 @@ export async function updateResume(url: string | null): Promise<UpdateResumeResu
   } catch (e) {
     console.error('updateResume error:', e);
     return { error: 'Failed to update resume' };
+  }
+}
+
+/* ========== Cover Letter URL ========== */
+
+export interface UpdateCoverLetterResult {
+  success?: boolean;
+  error?: string;
+}
+
+export async function updateCoverLetter(url: string | null, coverLetterName?: string | null): Promise<UpdateCoverLetterResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    await db.profile.update({
+      where: { id: profile.id },
+      data: { 
+        coverLetterUrl: url?.trim() || null,
+        coverLetterName: coverLetterName?.trim() || null,
+      },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (e) {
+    console.error('updateCoverLetter error:', e);
+    return { error: 'Failed to update cover letter' };
+  }
+}
+
+/* ========== Avatar ========== */
+
+export interface UpdateAvatarResult {
+  success?: boolean;
+  error?: string;
+}
+
+export async function updateAvatar(url: string | null): Promise<UpdateAvatarResult> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    await db.profile.update({
+      where: { id: profile.id },
+      data: { avatarUrl: url?.trim() || null },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true };
+  } catch (e) {
+    console.error('updateAvatar error:', e);
+    return { error: 'Failed to update avatar' };
   }
 }
 
@@ -300,6 +457,7 @@ export async function addProject(input: AddProjectInput): Promise<AddProjectResu
         projectLink: data.projectLink?.trim() || null,
         startDate,
         endDate,
+        skills: data.skills || [],
       },
       select: { id: true },
     });
@@ -341,6 +499,51 @@ export async function deleteProject(id: string): Promise<DeleteProjectResult> {
   }
 }
 
+export async function updateProject(
+  id: string,
+  input: AddProjectInput
+): Promise<AddProjectResult> {
+  try {
+    const parsed = AddProjectSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid project data' };
+    }
+    const data = parsed.data;
+
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    const startDate = data.startDate?.trim() ? new Date(data.startDate.trim()) : null;
+    const endDate = data.endDate?.trim() ? new Date(data.endDate.trim()) : null;
+
+    await db.project.updateMany({
+      where: { id, profileId: profile.id },
+      data: {
+        title: data.title.trim(),
+        description: data.description?.trim() || null,
+        role: data.role?.trim() || null,
+        projectLink: data.projectLink?.trim() || null,
+        startDate,
+        endDate,
+        skills: data.skills || [],
+      },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true, id };
+  } catch (e) {
+    console.error('updateProject error:', e);
+    return { error: 'Failed to update project' };
+  }
+}
+
 /* ========== Certificates ========== */
 
 export type AddCertificateInput = z.infer<typeof AddCertificateSchema>;
@@ -378,6 +581,7 @@ export async function addCertificate(input: AddCertificateInput): Promise<AddCer
         issuer: data.issuer?.trim() || null,
         issueDate,
         url: data.url?.trim() || null,
+        credentialId: data.credentialId?.trim() || null,
       },
       select: { id: true },
     });
@@ -416,6 +620,48 @@ export async function deleteCertificate(id: string): Promise<DeleteCertificateRe
   } catch (e) {
     console.error('deleteCertificate error:', e);
     return { error: 'Failed to delete certificate' };
+  }
+}
+
+export async function updateCertificate(
+  id: string,
+  input: AddCertificateInput
+): Promise<AddCertificateResult> {
+  try {
+    const parsed = AddCertificateSchema.safeParse(input);
+    if (!parsed.success) {
+      return { error: parsed.error.errors[0]?.message || 'Invalid certificate data' };
+    }
+    const data = parsed.data;
+
+    const user = await getCurrentUser();
+    if (!user) return { error: 'Not authenticated' };
+    requireUser(user);
+
+    const profile = await db.profile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    if (!profile) return { error: 'Profile not found' };
+
+    const issueDate = data.issueDate?.trim() ? new Date(data.issueDate.trim()) : null;
+
+    await db.certificate.updateMany({
+      where: { id, profileId: profile.id },
+      data: {
+        name: data.name.trim(),
+        issuer: data.issuer?.trim() || null,
+        issueDate,
+        url: data.url?.trim() || null,
+        credentialId: data.credentialId?.trim() || null,
+      },
+    });
+    revalidatePath('/profile');
+    revalidatePath('/dashboard');
+    return { success: true, id };
+  } catch (e) {
+    console.error('updateCertificate error:', e);
+    return { error: 'Failed to update certificate' };
   }
 }
 
@@ -550,6 +796,9 @@ export interface ProfileDetailsResult {
     skills: string[];
     experience: number;
     resumeUrl: string | null;
+    resumeName: string | null;
+    coverLetterUrl: string | null;
+    coverLetterName: string | null;
     avatarUrl: string | null;
     linkedinUrl: string | null;
     githubUrl: string | null;
@@ -577,6 +826,8 @@ export interface ProfileDetailsResult {
       startYear: number | null;
       endYear: number | null;
       isFullTime: boolean;
+      grade: string | null;
+      activities: string | null;
     }>;
     employment: Array<{
       id: string;
@@ -596,6 +847,7 @@ export interface ProfileDetailsResult {
       projectLink: string | null;
       startDate: Date | null;
       endDate: Date | null;
+      skills: string[];
     }>;
     certificates: Array<{
       id: string;
@@ -603,6 +855,7 @@ export interface ProfileDetailsResult {
       issuer: string | null;
       issueDate: Date | null;
       url: string | null;
+      credentialId: string | null;
     }>;
   };
 }
@@ -641,6 +894,9 @@ export async function getProfileDetails(): Promise<ProfileDetailsResult> {
         skills: profile.skills,
         experience: profile.experience,
         resumeUrl: profile.resumeUrl,
+        resumeName: profile.resumeName,
+        coverLetterUrl: profile.coverLetterUrl,
+        coverLetterName: profile.coverLetterName,
         avatarUrl: profile.avatarUrl,
         linkedinUrl: profile.linkedinUrl ?? null,
         githubUrl: profile.githubUrl ?? null,
@@ -670,6 +926,7 @@ export async function getProfileDetails(): Promise<ProfileDetailsResult> {
           projectLink: p.projectLink,
           startDate: p.startDate ?? null,
           endDate: p.endDate ?? null,
+          skills: p.skills,
         })),
         certificates: profile.certificates.map((c) => ({
           id: c.id,
@@ -677,6 +934,7 @@ export async function getProfileDetails(): Promise<ProfileDetailsResult> {
           issuer: c.issuer,
           issueDate: c.issueDate,
           url: c.url ?? null,
+          credentialId: c.credentialId ?? null,
         })),
       },
     };

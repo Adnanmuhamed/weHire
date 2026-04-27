@@ -10,7 +10,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useMemo, useState } from 'react';
-import { Filter } from 'lucide-react';
+import { Filter, Bookmark } from 'lucide-react';
 import { JobType, WorkMode } from '@prisma/client';
 import { QUALIFICATION_OPTIONS } from '@/lib/constants/job-fields';
 import { INDUSTRY_OPTIONS } from '@/lib/constants/company-fields';
@@ -318,6 +318,25 @@ export default function FilterSidebar({ companies }: FilterSidebarProps) {
               </label>
             ))}
           </div>
+        </div>
+
+        {/* Saved Jobs */}
+        <div className="border-t border-foreground/10 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              const isSaved = searchParams.get('saved') === 'true';
+              updateParams({ saved: isSaved ? undefined : 'true' });
+            }}
+            className={`w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              searchParams.get('saved') === 'true'
+                ? 'bg-foreground text-background'
+                : 'border border-foreground/20 text-foreground hover:bg-foreground/5'
+            }`}
+          >
+            <Bookmark className={`w-4 h-4 ${searchParams.get('saved') === 'true' ? 'fill-background' : ''}`} />
+            Saved Jobs Only
+          </button>
         </div>
 
         <button

@@ -243,7 +243,8 @@ export default function PostJobPage() {
                     valueAsNumber: true,
                     setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
                   })}
-                  className={inputCls(!!errors.salaryMin)} placeholder="e.g., 500000" disabled={isSubmitting} />
+                  className={inputCls(!!errors.salaryMin)} placeholder="e.g., 300000" disabled={isSubmitting} />
+                <p className="mt-1 text-xs text-foreground/50">Enter raw amount in INR (e.g., 300000 for 3 LPA)</p>
                 {errors.salaryMin && <p className={errCls}>{errors.salaryMin.message}</p>}
               </div>
               <div>
@@ -253,7 +254,8 @@ export default function PostJobPage() {
                     valueAsNumber: true,
                     setValueAs: (v) => (v === '' || v == null ? undefined : Number(v)),
                   })}
-                  className={inputCls(!!errors.salaryMax)} placeholder="e.g., 1200000" disabled={isSubmitting} />
+                  className={inputCls(!!errors.salaryMax)} placeholder="e.g., 600000" disabled={isSubmitting} />
+                <p className="mt-1 text-xs text-foreground/50">Enter raw amount in INR (e.g., 600000 for 6 LPA)</p>
                 {errors.salaryMax && <p className={errCls}>{errors.salaryMax.message}</p>}
               </div>
             </div>
